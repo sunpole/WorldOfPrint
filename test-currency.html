@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Тест валютного модуля</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #222;
+      color: #eee;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+    button {
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      text-align: center;
+    }
+    button:hover {
+      background: #444;
+    }
+    #log {
+      margin-top: 20px;
+      background: #111;
+      padding: 10px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 13px;
+      border: 1px solid #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Тест валютного модуля</h1>
+  <div id="grid"></div>
+  <div id="log"></div>
+
+  <script type="module">
+    import * as currency from './currency.js';
+
+    const grid = document.getElementById('grid');
+    const log = document.getElementById('log');
+
+    const logMsg = msg => {
+      const entry = document.createElement('div');
+      entry.textContent = msg;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    };
+
+    const actions = [
+      { name: 'initCurrency', fn: () => currency.initCurrency(100) },
+      { name: 'getCurrency', fn: () => logMsg('Баланс: ' + currency.getCurrency()) },
+      { name: 'setCurrency', fn: () => currency.setCurrency(50, 'ручная установка') },
+      { name: 'addCurrency', fn: () => currency.addCurrency(10, 'тест начисления') },
+      { name: 'loseCurrency', fn: () => currency.loseCurrency(5, 'тест списания') },
+      { name: 'canAfford', fn: () => logMsg('Можно потратить 30? ' + currency.canAfford(30)) },
+      { name: 'spendCurrency', fn: () => currency.spendCurrency(30, 'покупка') },
+      { name: 'multiplyCurrency', fn: () => currency.multiplyCurrency(2) },
+      { name: 'resetCurrency', fn: () => currency.resetCurrency() },
+      { name: 'getCurrencyHistory', fn: () => logMsg(JSON.stringify(currency.getCurrencyHistory(), null, 2)) },
+      { name: 'checkGameOver', fn: () => currency.checkGameOver() },
+      { name: 'applyTemporaryMultiplier', fn: () => currency.applyTemporaryMultiplier(1.5, 2) },
+      { name: 'updateTemporaryEffects', fn: () => currency.updateTemporaryEffects(1) },
+      { name: 'freezeCurrency', fn: () => currency.freezeCurrency() },
+      { name: 'unfreezeCurrency', fn: () => currency.unfreezeCurrency() },
+      { name: 'saveCurrencyState', fn: () => currency.saveCurrencyState() },
+      { name: 'loadCurrencyState', fn: () => currency.loadCurrencyState() },
+      { name: 'safeSpendCurrency', fn: () => currency.safeSpendCurrency(999, 'тест безопасной траты') },
+      { name: 'subscribe', fn: () => currency.subscribe(b => logMsg(`Подписка: баланс = ${b}`)) },
+      { name: 'unsubscribe', fn: () => currency.unsubscribe(b => logMsg(`Подписка: баланс = ${b}`)) },
+      { name: 'setMinCurrencyLimit', fn: () => currency.setMinCurrencyLimit(20) },
+      { name: 'getMinCurrencyLimit', fn: () => logMsg('Мин. лимит: ' + currency.getMinCurrencyLimit()) },
+      { name: 'on(change)', fn: () => currency.on('change', e => logMsg(`[on:change] Баланс: ${e.currency}`)) },
+      { name: 'on(gameover)', fn: () => currency.on('gameover', e => logMsg(`[on:gameover] Баланс: ${e.currency}`)) },
+      { name: 'off all events', fn: () => {
+          currency.off('change');
+          currency.off('gameover');
+          logMsg('События отключены');
+        }
+      }
+    ];
+
+    actions.forEach(({ name, fn }) => {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.addEventListener('click', fn);
+      grid.appendChild(btn);
+    });
+  </script>
+</body>
+</html>
