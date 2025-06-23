@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Тест: поле, пушки и враги с Drag&Drop</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #222;
+      color: #eee;
+      margin: 20px;
+      user-select: none;
+    }
+    h1 {
+      margin-bottom: 10px;
+    }
+    #game-container {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(15, 30px);
+      grid-template-rows: repeat(15, 30px);
+      gap: 2px;
+      border: 2px solid #444;
+      background: #111;
+      position: relative;
+      user-select: none;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #333;
+      border-radius: 3px;
+      box-sizing: border-box;
+      cursor: pointer;
+      position: relative;
+    }
+    .cell.hovered {
+      outline: 2px solid #66f;
+    }
+    #shop-towers, #shop-enemies {
+      background: #111;
+      padding: 10px;
+      border-radius: 6px;
+      width: 160px;
+      user-select: none;
+    }
+    #shop-towers h2, #shop-enemies h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #555;
+      padding-bottom: 5px;
+    }
+    .shop-item {
+      background: #333;
+      margin-bottom: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+      user-select: none;
+    }
+    .shop-item:hover {
+      background: #555;
+    }
+    .shop-item .icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .tower-icon {
+      background: crimson;
+    }
+    .enemy-icon {
+      background: darkgreen;
+    }
+    #held-object {
+      position: fixed;
+      pointer-events: none;
+      width: 30px;
+      height: 30px;
+      opacity: 0.7;
+      border-radius: 3px;
+      z-index: 9999;
+      display: none;
+      user-select: none;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    .tower {
+      background: crimson;
+      border-radius: 3px;
+      position: relative;
+    }
+    .enemy {
+      background: darkgreen;
+      border-radius: 50%;
+      position: relative;
+    }
+    .projectile {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: yellow;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Тест: игровое поле + магазин пушек и врагов + стрельба</h1>
+
+<div id="game-container">
+  <div id="game-board"></div>
+
+  <div id="shop-towers">
+    <h2>Магазин пушек</h2>
+    <div class="shop-item" data-type="tower" data-name="Башня A" data-range="90" data-fire-rate="1500" data-damage="10">
+      <div class="icon tower-icon"></div>
+      Башня A (Урон 10, Перезарядка 1.5с)
+    </div>
+    <div class="shop-item" data-type="tower" data-name="Башня B" data-range="120" data-fire-rate="1000" data-damage="6">
+      <div class="icon tower-icon"></div>
+      Башня B (Урон 6, Перезарядка 1с)
+    </div>
+  </div>
+
+  <div id="shop-enemies">
+    <h2>Магазин врагов</h2>
+    <div class="shop-item" data-type="enemy" data-name="Враг X" data-hp="50" data-speed="1">
+      <div class="icon enemy-icon"></div>
+      Враг X (HP 50, Скорость 1)
+    </div>
+    <div class="shop-item" data-type="enemy" data-name="Враг Y" data-hp="30" data-speed="2">
+      <div class="icon enemy-icon"></div>
+      Враг Y (HP 30, Скорость 2)
+    </div>
+  </div>
+</div>
+
+<div id="status">Выбран объект: <i>ничего</i></div>
+
+<div id="held-object"></div>
+
+<script>
+  const BOARD_SIZE = 15;
+  const CELL_SIZE = 30;
+
+  const gameBoard = document.getElementById('game-board');
+  const status = document.getElementById('status');
+  const heldObjectDiv = document.getElementById('held-object');
+
+  // Массивы с объектами на поле
+  let towers = [];
+  let enemies = [];
+
+  // Что сейчас в руке (объект из магазина или null)
+  let heldObject = null;
+
+  // Состояние клеток: для башен и врагов отдельно (по одному объекту на клетку)
+  const towerGrid = new Array(BOARD_SIZE * BOARD_SIZE).fill(null);
+  const enemyGrid = new Array(BOARD_SIZE * BOARD_SIZE).fill(null);
+
+  // Создаем поле 15x15
+  for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+    const cell = document.createElement('div');
+    cell.classList.add('cell');
+    cell.dataset.index = i;
+    gameBoard.appendChild(cell);
+
+    cell.addEventListener('click', () => {
+      if (!heldObject) return; // Если ничего не взято - клики не ставят
+
+      if (heldObject.type === 'tower') {
+        if (towerGrid[i] === null) {
+          placeTower(i, heldObject);
+        } else {
+          updateStatus('Тут уже есть башня!');
+        }
+      } else if (heldObject.type === 'enemy') {
+        if (enemyGrid[i] === null) {
+          placeEnemy(i, heldObject);
+        } else {
+          updateStatus('Тут уже есть враг!');
+        }
+      }
+    });
+
+    cell.addEventListener('mouseenter', () => {
+      if (heldObject) {
+        cell.classList.add('hovered');
+      }
+    });
+    cell.addEventListener('mouseleave', () => {
+      cell.classList.remove('hovered');
+    });
+  }
+
+  // Магазин — клик по элементу магазина — взять в руку
+  document.querySelectorAll('.shop-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const type = el.dataset.type;
+      heldObject = {
+        type,
+        name: el.dataset.name,
+        range: +el.dataset.range || 0,
+        fireRate: +el.dataset.fireRate || 0,
+        damage: +el.dataset.damage || 0,
+        hp: +el.dataset.hp || 0,
+        speed: +el.dataset.speed || 0
+      };
+      updateHeldObjectDiv();
+      updateStatus(`Взято в руку: ${heldObject.name}`);
+    });
+  });
+
+  // ПКМ отменяет взятие объекта
+  window.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (heldObject) {
+      heldObject = null;
+      updateHeldObjectDiv();
+      updateStatus('Отмена выбора');
+    }
+  });
+
+  // Следим за движением мыши, чтобы позиционировать heldObjectDiv
+  window.addEventListener('mousemove', e => {
+    if (heldObject) {
+      heldObjectDiv.style.display = 'block';
+      heldObjectDiv.style.left = (e.pageX + 10) + 'px';
+      heldObjectDiv.style.top = (e.pageY + 10) + 'px';
+      heldObjectDiv.textContent = heldObject.name;
+      heldObjectDiv.style.backgroundColor = heldObject.type === 'tower' ? 'crimson' : 'darkgreen';
+    } else {
+      heldObjectDiv.style.display = 'none';
+    }
+  });
+
+  // Разместить башню на поле
+  function placeTower(index, obj) {
+    // Добавляем в массив и сетку
+    towers.push({
+      cellIndex: index,
+      ...obj,
+      cooldown: 0
+    });
+    towerGrid[index] = obj;
+    updateCellVisual(index);
+    updateStatus(`Башня "${obj.name}" поставлена в клетку ${index}`);
+  }
+
+  // Разместить врага на поле
+  function placeEnemy(index, obj) {
+    enemies.push({
+      cellIndex: index,
+      ...obj,
+      hp: obj.hp,
+      x: (index % BOARD_SIZE) * CELL_SIZE + CELL_SIZE/2,
+      y: Math.floor(index / BOARD_SIZE) * CELL_SIZE + CELL_SIZE/2,
+    });
+    enemyGrid[index] = obj;
+    updateCellVisual(index);
+    updateStatus(`Враг "${obj.name}" поставлен в клетку ${index}`);
+  }
+
+  // Обновить визуал клетки: поставить цвет башни или врага
+  function updateCellVisual(index) {
+    const cell = gameBoard.children[index];
+    cell.classList.remove('tower', 'enemy');
+
+    if (towerGrid[index]) {
+      cell.classList.add('tower');
+      cell.title = `Башня: ${towerGrid[index].name}`;
+    } else if (enemyGrid[index]) {
+      cell.classList.add('enemy');
+      cell.title = `Враг: ${enemyGrid[index].name}`;
+    } else {
+      cell.title = '';
+    }
+  }
+
+  // Обновить статус внизу
+  function updateStatus(msg) {
+    status.textContent = msg;
+  }
+
+  // Стрелять снарядами по ближайшему врагу
+  // Простейшая логика: для каждой башни каждые fireRate мс стреляет, если есть враг в радиусе
+  function gameLoop() {
+    const now = performance.now();
+
+    towers.forEach(tower => {
+      if (!tower.lastShotTime) tower.lastShotTime = 0;
+      if (now - tower.lastShotTime < tower.fireRate) return;
+
+      // Найти ближайшего врага в радиусе
+      const towerX = (tower.cellIndex % BOARD_SIZE) * CELL_SIZE + CELL_SIZE/2;
+      const towerY = Math.floor(tower.cellIndex / BOARD_SIZE) * CELL_SIZE + CELL_SIZE/2;
+
+      let nearestEnemy = null;
+      let nearestDist = Infinity;
+
+      enemies.forEach(enemy => {
+        const dx = enemy.x - towerX;
+        const dy = enemy.y - towerY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist <= tower.range && dist < nearestDist) {
+          nearestEnemy = enemy;
+          nearestDist = dist;
+        }
+      });
+
+      if (nearestEnemy) {
+        shootProjectile(towerX, towerY, nearestEnemy);
+        tower.lastShotTime = now;
+      }
+    });
+
+    moveProjectiles();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Снаряды летят к врагу, при достижении наносят урон
+  let projectiles = [];
+
+  function shootProjectile(sx, sy, targetEnemy) {
+    const projectile = {
+      x: sx,
+      y: sy,
+      target: targetEnemy,
+      speed: 300, // пикселей в секунду
+      damage: 10
+    };
+    projectiles.push(projectile);
+  }
+
+  function moveProjectiles() {
+    const now = performance.now();
+    const dt = 16 / 1000; // ~16ms, фиксированное обновление (можно улучшить)
+
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      if (!p.target) {
+        projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Вектор к цели
+      const dx = p.target.x - p.x;
+      const dy = p.target.y - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < 5) {
+        // Попадание - наносим урон и удаляем снаряд
+        p.target.hp -= p.damage;
+        if (p.target.hp <= 0) {
+          // Убиваем врага - убираем с поля
+          removeEnemy(p.target.cellIndex);
+          updateStatus(`Враг "${p.target.name}" уничтожен!`);
+        }
+        projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Движение снаряда к цели
+      const vx = (dx / dist) * p.speed * dt;
+      const vy = (dy / dist) * p.speed * dt;
+      p.x += vx;
+      p.y += vy;
+    }
+
+    renderProjectiles();
+  }
+
+  // Удалить врага с поля и массива
+  function removeEnemy(index) {
+    const enemyIndex = enemies.findIndex(e => e.cellIndex === index);
+    if (enemyIndex >= 0) enemies.splice(enemyIndex, 1);
+    enemyGrid[index] = null;
+    updateCellVisual(index);
+  }
+
+  // Отрисовка снарядов
+  function renderProjectiles() {
+    // Удаляем старые
+    document.querySelectorAll('.projectile').forEach(el => el.remove());
+
+    projectiles.forEach(p => {
+      const el = document.createElement('div');
+      el.classList.add('projectile');
+      el.style.left = `${p.x - 4}px`;
+      el.style.top = `${p.y - 4}px`;
+      gameBoard.appendChild(el);
+    });
+  }
+
+  // Начинаем игровой цикл
+  requestAnimationFrame(gameLoop);
+</script>
+
+</body>
+</html>
