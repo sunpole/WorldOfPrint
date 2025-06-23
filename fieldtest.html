@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Простое игровое поле 15x15</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #222;
+      color: #eee;
+      padding: 20px;
+      user-select: none;
+    }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(15, 30px);
+      grid-template-rows: repeat(15, 30px);
+      gap: 2px;
+      margin-bottom: 15px;
+      width: max-content;
+      border: 2px solid #444;
+      background: #111;
+    }
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #333;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cell:hover {
+      background: #555;
+    }
+    .tower {
+      background: crimson;
+      box-shadow: 0 0 5px crimson;
+    }
+    #status {
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Игровое поле 15x15 — ставим башни</h1>
+<div id="game-board"></div>
+<div id="status">Башен поставлено: 0</div>
+
+<script>
+  const board = document.getElementById('game-board');
+  const status = document.getElementById('status');
+
+  // Массив состояния клеток: false — пустая, true — башня
+  const grid = new Array(15 * 15).fill(false);
+
+  // Создаем 15x15 клеток
+  for (let i = 0; i < 15 * 15; i++) {
+    const cell = document.createElement('div');
+    cell.classList.add('cell');
+    cell.dataset.index = i;
+
+    cell.addEventListener('click', () => {
+      // Переключаем состояние башни
+      grid[i] = !grid[i];
+      updateCell(i);
+      updateStatus();
+    });
+
+    board.appendChild(cell);
+  }
+
+  // Обновить визуально одну клетку
+  function updateCell(index) {
+    const cell = board.children[index];
+    if (grid[index]) {
+      cell.classList.add('tower');
+      cell.title = 'Башня';
+    } else {
+      cell.classList.remove('tower');
+      cell.title = '';
+    }
+  }
+
+  // Обновить статус с количеством башен
+  function updateStatus() {
+    const count = grid.filter(Boolean).length;
+    status.textContent = `Башен поставлено: ${count}`;
+  }
+</script>
+
+</body>
+</html>
