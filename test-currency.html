@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Тест валютного модуля</title>
+  <meta charset="UTF-8" />
+  <title>Интерактивный тест currency.js</title>
   <style>
     body {
       font-family: sans-serif;
@@ -17,6 +17,7 @@
       display: grid;
       grid-template-columns: repeat(6, 1fr);
       gap: 10px;
+      margin-bottom: 20px;
     }
     button {
       background: #333;
@@ -32,7 +33,6 @@
       background: #444;
     }
     #log {
-      margin-top: 20px;
       background: #111;
       padding: 10px;
       height: 200px;
@@ -40,12 +40,37 @@
       font-family: monospace;
       font-size: 13px;
       border: 1px solid #555;
+      margin-bottom: 20px;
+    }
+    #info {
+      background: #333;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    #status {
+      background: #222;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #555;
+      font-size: 16px;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
-  <h1>Тест валютного модуля</h1>
+  <h1>Интерактивный тест currency.js</h1>
+  
+  <div id="status">Баланс: --</div>
+  <div id="info">Нажмите кнопку, чтобы увидеть описание действия...</div>
+  
   <div id="grid"></div>
+  
   <div id="log"></div>
 
   <script type="module">
@@ -53,7 +78,17 @@
 
     const grid = document.getElementById('grid');
     const log = document.getElementById('log');
+    const info = document.getElementById('info');
+    const status = document.getElementById('status');
 
+    // Функция обновления статуса баланса и лимита
+    function updateStatus() {
+      const balance = currency.getCurrency();
+      const minLimit = currency.getMinCurrencyLimit();
+      status.textContent = `Баланс: ${balance}\nМинимальный лимит: ${minLimit}\nЗаморожен: ${currency.isFrozen ? 'Да' : 'Нет'}`;
+    }
+
+    // Логирование в окно лога
     const logMsg = msg => {
       const entry = document.createElement('div');
       entry.textContent = msg;
@@ -61,45 +96,132 @@
       log.scrollTop = log.scrollHeight;
     };
 
+    // Запомним callback для subscribe/unsubscribe
+    let subscriberCallback = null;
+    let onChangeCallback = null;
+    let onGameOverCallback = null;
+
+    // Описание действий (чтобы показывать в #info)
+    const descriptions = {
+      initCurrency: 'Инициализация баланса валюты в 100. Сбрасывает историю и эффекты.',
+      getCurrency: 'Показывает текущий баланс валюты.',
+      setCurrency: 'Устанавливает баланс валюты в 50 с причиной "ручная установка".',
+      addCurrency: 'Добавляет 10 единиц валюты с причиной "тест начисления".',
+      loseCurrency: 'Списывает 5 единиц валюты с причиной "тест списания".',
+      canAfford: 'Проверяет, достаточно ли валюты для траты 30 единиц и выводит результат.',
+      spendCurrency: 'Пытается потратить 30 единиц валюты на "покупку".',
+      multiplyCurrency: 'Умножает текущий баланс на 2.',
+      resetCurrency: 'Сбрасывает валюту, историю, эффекты и размораживает баланс.',
+      getCurrencyHistory: 'Показывает историю всех изменений баланса в виде JSON.',
+      checkGameOver: 'Проверяет, не достигнут ли минимальный лимит валюты (игра окончена).',
+      applyTemporaryMultiplier: 'Добавляет временный множитель x1.5 на 2 волны.',
+      updateTemporaryEffects: 'Обновляет временные эффекты для текущей волны (волна 1).',
+      freezeCurrency: 'Замораживает изменения баланса (последующие изменения игнорируются).',
+      unfreezeCurrency: 'Размораживает баланс, изменения становятся возможны.',
+      saveCurrencyState: 'Сохраняет текущее состояние валюты в localStorage.',
+      loadCurrencyState: 'Загружает состояние валюты из localStorage.',
+      safeSpendCurrency: 'Пытается потратить 999 единиц валюты безопасно (без мгновенного проигрыша).',
+      subscribe: 'Подписывается на изменения баланса — при изменении пишет в лог.',
+      unsubscribe: 'Отписывается от изменений баланса (предыдущий подписчик).',
+      setMinCurrencyLimit: 'Устанавливает минимальный лимит валюты в 20 единиц.',
+      getMinCurrencyLimit: 'Показывает текущий минимальный лимит валюты.',
+      'on(change)': 'Подписывается на событие изменения баланса (EventEmitter).',
+      'on(gameover)': 'Подписывается на событие окончания игры (gameover).',
+      'off all events': 'Отключает все подписки на события change и gameover.'
+    };
+
+    // Функции для кнопок
     const actions = [
-      { name: 'initCurrency', fn: () => currency.initCurrency(100) },
+      { name: 'initCurrency', fn: () => { currency.initCurrency(100); updateStatus(); } },
       { name: 'getCurrency', fn: () => logMsg('Баланс: ' + currency.getCurrency()) },
-      { name: 'setCurrency', fn: () => currency.setCurrency(50, 'ручная установка') },
-      { name: 'addCurrency', fn: () => currency.addCurrency(10, 'тест начисления') },
-      { name: 'loseCurrency', fn: () => currency.loseCurrency(5, 'тест списания') },
+      { name: 'setCurrency', fn: () => { currency.setCurrency(50, 'ручная установка'); updateStatus(); } },
+      { name: 'addCurrency', fn: () => { currency.addCurrency(10, 'тест начисления'); updateStatus(); } },
+      { name: 'loseCurrency', fn: () => { currency.loseCurrency(5, 'тест списания'); updateStatus(); } },
       { name: 'canAfford', fn: () => logMsg('Можно потратить 30? ' + currency.canAfford(30)) },
-      { name: 'spendCurrency', fn: () => currency.spendCurrency(30, 'покупка') },
-      { name: 'multiplyCurrency', fn: () => currency.multiplyCurrency(2) },
-      { name: 'resetCurrency', fn: () => currency.resetCurrency() },
+      { name: 'spendCurrency', fn: () => { currency.spendCurrency(30, 'покупка'); updateStatus(); } },
+      { name: 'multiplyCurrency', fn: () => { currency.multiplyCurrency(2); updateStatus(); } },
+      { name: 'resetCurrency', fn: () => { currency.resetCurrency(); updateStatus(); } },
       { name: 'getCurrencyHistory', fn: () => logMsg(JSON.stringify(currency.getCurrencyHistory(), null, 2)) },
       { name: 'checkGameOver', fn: () => currency.checkGameOver() },
       { name: 'applyTemporaryMultiplier', fn: () => currency.applyTemporaryMultiplier(1.5, 2) },
-      { name: 'updateTemporaryEffects', fn: () => currency.updateTemporaryEffects(1) },
-      { name: 'freezeCurrency', fn: () => currency.freezeCurrency() },
-      { name: 'unfreezeCurrency', fn: () => currency.unfreezeCurrency() },
+      { name: 'updateTemporaryEffects', fn: () => { currency.updateTemporaryEffects(1); updateStatus(); } },
+      { name: 'freezeCurrency', fn: () => { currency.freezeCurrency(); updateStatus(); } },
+      { name: 'unfreezeCurrency', fn: () => { currency.unfreezeCurrency(); updateStatus(); } },
       { name: 'saveCurrencyState', fn: () => currency.saveCurrencyState() },
-      { name: 'loadCurrencyState', fn: () => currency.loadCurrencyState() },
-      { name: 'safeSpendCurrency', fn: () => currency.safeSpendCurrency(999, 'тест безопасной траты') },
-      { name: 'subscribe', fn: () => currency.subscribe(b => logMsg(`Подписка: баланс = ${b}`)) },
-      { name: 'unsubscribe', fn: () => currency.unsubscribe(b => logMsg(`Подписка: баланс = ${b}`)) },
-      { name: 'setMinCurrencyLimit', fn: () => currency.setMinCurrencyLimit(20) },
+      { name: 'loadCurrencyState', fn: () => { currency.loadCurrencyState(); updateStatus(); } },
+      { name: 'safeSpendCurrency', fn: () => { currency.safeSpendCurrency(999, 'тест безопасной траты'); updateStatus(); } },
+      { name: 'subscribe', fn: () => {
+          if (!subscriberCallback) {
+            subscriberCallback = b => logMsg(`Подписка: баланс = ${b}`);
+            currency.subscribe(subscriberCallback);
+            logMsg('Подписка активирована');
+          } else {
+            logMsg('Подписка уже активна');
+          }
+        }
+      },
+      { name: 'unsubscribe', fn: () => {
+          if (subscriberCallback) {
+            currency.unsubscribe(subscriberCallback);
+            subscriberCallback = null;
+            logMsg('Подписка отключена');
+          } else {
+            logMsg('Подписка неактивна');
+          }
+        }
+      },
+      { name: 'setMinCurrencyLimit', fn: () => { currency.setMinCurrencyLimit(20); updateStatus(); } },
       { name: 'getMinCurrencyLimit', fn: () => logMsg('Мин. лимит: ' + currency.getMinCurrencyLimit()) },
-      { name: 'on(change)', fn: () => currency.on('change', e => logMsg(`[on:change] Баланс: ${e.currency}`)) },
-      { name: 'on(gameover)', fn: () => currency.on('gameover', e => logMsg(`[on:gameover] Баланс: ${e.currency}`)) },
+      { name: 'on(change)', fn: () => {
+          if (!onChangeCallback) {
+            onChangeCallback = e => logMsg(`[on:change] Баланс: ${e.currency}`);
+            currency.on('change', onChangeCallback);
+            logMsg('Подписка на change активирована');
+          } else {
+            logMsg('Подписка на change уже активна');
+          }
+        }
+      },
+      { name: 'on(gameover)', fn: () => {
+          if (!onGameOverCallback) {
+            onGameOverCallback = e => logMsg(`[on:gameover] GAME OVER при балансе ${e.currency}`);
+            currency.on('gameover', onGameOverCallback);
+            logMsg('Подписка на gameover активирована');
+          } else {
+            logMsg('Подписка на gameover уже активна');
+          }
+        }
+      },
       { name: 'off all events', fn: () => {
-          currency.off('change');
-          currency.off('gameover');
-          logMsg('События отключены');
+          if (onChangeCallback) {
+            currency.off('change', onChangeCallback);
+            onChangeCallback = null;
+          }
+          if (onGameOverCallback) {
+            currency.off('gameover', onGameOverCallback);
+            onGameOverCallback = null;
+          }
+          logMsg('Все события отключены');
         }
       }
     ];
 
+    // Создаём кнопки и добавляем описания
     actions.forEach(({ name, fn }) => {
       const btn = document.createElement('button');
       btn.textContent = name;
-      btn.addEventListener('click', fn);
+
+      btn.addEventListener('click', () => {
+        info.textContent = descriptions[name] || 'Описание недоступно';
+        fn();
+      });
+
       grid.appendChild(btn);
     });
+
+    // Инициализация состояния
+    updateStatus();
+
   </script>
 </body>
 </html>
