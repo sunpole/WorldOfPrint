@@ -52,6 +52,7 @@
     <button id="goalBtn">🔴 Финиш</button>
     <button id="addSpawnerBtn">➕ Добавить спавн</button>
     <button id="resetBtn">♻️ Сброс</button>
+    <button id="start-move">▶️ Пуск</button>
 
     <div class="labelled">
       <label>Скорость:</label>
@@ -70,37 +71,7 @@
 
   <div class="log" id="log"></div>
 
-  <script type="module">
-    import {
-      initPathfinder,
-      updateGrid,
-      addSpawner,
-      removeSpawner,
-      getPathForSpawner,
-      getDebugOverlay,
-      setPathForSpawner,
-      applyEffectToPosition
-    } from './pathfinder.js';
-
-    import {
-      selectTool,
-      updateSpeed,
-      updateMoveMode,
-      resetGrid,
-      draw,
-      handleCanvasClick
-    } from './test-pathfinder.js';
-
-    // Привязка событий
-    document.getElementById('wallBtn').onclick = () => selectTool('wall');
-    document.getElementById('startBtn').onclick = () => selectTool('start');
-    document.getElementById('goalBtn').onclick = () => selectTool('goal');
-    document.getElementById('addSpawnerBtn').onclick = addSpawner;
-    document.getElementById('resetBtn').onclick = resetGrid;
-
-    document.getElementById('speedRange').oninput = e => updateSpeed(e.target.value);
-    document.getElementById('speedInput').oninput = e => updateSpeed(e.target.value);
-    document.getElementById('moveMode').onchange = updateMoveMode;
-  </script>
+  <!-- Подключаем модуль test-pathfinder.js, он сам импортирует pathfinder.js -->
+  <script type="module" src="./test-pathfinder.js"></script>
 </body>
 </html>
