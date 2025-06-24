@@ -47,21 +47,21 @@
   <canvas id="grid-canvas" width="480" height="480"></canvas>
 
   <div class="toolbar">
-    <button onclick="window.selectTool('wall')">🧱 Стена</button>
-    <button onclick="window.selectTool('start')">🟢 Старт</button>
-    <button onclick="window.selectTool('goal')">🔴 Финиш</button>
-    <button onclick="window.addSpawner()">➕ Добавить спавн</button>
-    <button onclick="window.resetGrid()">♻️ Сброс</button>
+    <button id="wallBtn">🧱 Стена</button>
+    <button id="startBtn">🟢 Старт</button>
+    <button id="goalBtn">🔴 Финиш</button>
+    <button id="addSpawnerBtn">➕ Добавить спавн</button>
+    <button id="resetBtn">♻️ Сброс</button>
 
     <div class="labelled">
       <label>Скорость:</label>
-      <input type="range" id="speedRange" min="1" max="10" value="5" oninput="window.updateSpeed(this.value)">
-      <input type="number" id="speedInput" min="1" max="10" value="5" oninput="window.updateSpeed(this.value)">
+      <input type="range" id="speedRange" min="1" max="10" value="5">
+      <input type="number" id="speedInput" min="1" max="10" value="5">
     </div>
 
     <div class="labelled">
       <label>Режим перемещения:</label>
-      <select id="moveMode" onchange="window.updateMoveMode()">
+      <select id="moveMode">
         <option value="4">4 стороны</option>
         <option value="8">8 сторон</option>
       </select>
@@ -70,6 +70,37 @@
 
   <div class="log" id="log"></div>
 
-  <script type="module" src="./test-pathfinder.js"></script>
+  <script type="module">
+    import {
+      initPathfinder,
+      updateGrid,
+      addSpawner,
+      removeSpawner,
+      getPathForSpawner,
+      getDebugOverlay,
+      setPathForSpawner,
+      applyEffectToPosition
+    } from './core/pathfinder.js';
+
+    import {
+      selectTool,
+      updateSpeed,
+      updateMoveMode,
+      resetGrid,
+      draw,
+      handleCanvasClick
+    } from './test-pathfinder.js';
+
+    // Привязка событий
+    document.getElementById('wallBtn').onclick = () => selectTool('wall');
+    document.getElementById('startBtn').onclick = () => selectTool('start');
+    document.getElementById('goalBtn').onclick = () => selectTool('goal');
+    document.getElementById('addSpawnerBtn').onclick = addSpawner;
+    document.getElementById('resetBtn').onclick = resetGrid;
+
+    document.getElementById('speedRange').oninput = e => updateSpeed(e.target.value);
+    document.getElementById('speedInput').oninput = e => updateSpeed(e.target.value);
+    document.getElementById('moveMode').onchange = updateMoveMode;
+  </script>
 </body>
 </html>
