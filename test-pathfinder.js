@@ -7,7 +7,6 @@ import {
   getDebugOverlay,
   setPathForSpawner,
   applyEffectToPosition,
-  // setMovementMode // Убираем, её нет
 } from './pathfinder.js';
 
 const GRID_WIDTH = 15;
@@ -135,16 +134,20 @@ canvas.addEventListener('click', e => {
 });
 
 let orders = [];
+let moveTimer = null;
 function tickMovement() {
+  let stillMoving = false;
   orders.forEach(order => {
     const path = getPathForSpawner(order.id);
     if (path && order.index < path.length - 1) {
       order.index++;
       order.pos = path[order.index];
+      stillMoving = true;
     }
   });
   draw();
-  setTimeout(tickMovement, 1000 / speed);
+  if (stillMoving) moveTimer = setTimeout(tickMovement, 1000 / speed);
+  else moveTimer = null;
 }
 
 function drawOrders() {
@@ -162,6 +165,7 @@ function drawOrders() {
 }
 
 function startOrders() {
+  if (moveTimer) clearTimeout(moveTimer);
   orders = Object.keys(spawners).map(id => ({
     id,
     pos: { ...spawners[id].pos },
