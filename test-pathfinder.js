@@ -1,3 +1,5 @@
+//test-pathfinder.js
+
 import {
   initPathfinder,
   updateGrid,
