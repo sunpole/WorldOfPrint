@@ -219,10 +219,11 @@ function initUI() {
     getPathForSpawner
   };
   for (const name in tests) {
-    if (typeof tests[name] !== 'function') log(`[❌] Функция \\`${name}()\\` не определена`);
-    else log(`[✅] \\`${name}()\\` готова`);
+    if (typeof tests[name] !== 'function') log(`[❌] Функция \`${name}()\` не определена`);
+    else log(`[✅] \`${name}()\` готова`);
   }
 })();
+
 
 // === Экспорт для отладки ===
 export {
