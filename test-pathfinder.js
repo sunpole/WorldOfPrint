@@ -1,5 +1,3 @@
-// test-pathfinder.js
-
 import {
   initPathfinder,
   updateGrid,
@@ -9,7 +7,7 @@ import {
   getDebugOverlay,
   setPathForSpawner,
   applyEffectToPosition,
-  setMovementMode
+  // setMovementMode // Убираем, её нет
 } from './pathfinder.js';
 
 const GRID_WIDTH = 15;
@@ -41,9 +39,9 @@ function updateSpeed(val) {
 function updateMoveMode() {
   const mode = parseInt(document.getElementById('moveMode').value);
   movementMode = mode;
-  setMovementMode(mode);
+  const useDiagonal = (movementMode === 8);
   for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, movementMode);
+    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal);
   }
   draw();
 }
@@ -122,13 +120,15 @@ canvas.addEventListener('click', e => {
       const id = `S${currentSpawnerId++}`;
       const color = getRandomColor();
       spawners[id] = { pos: { x, y }, color };
-      addSpawner(id, { x, y });
+      const useDiagonal = (movementMode === 8);
+      addSpawner(id, { x, y }, goal, useDiagonal);
       break;
   }
 
   updateGrid(grid);
+  const useDiagonal = (movementMode === 8);
   for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, movementMode);
+    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal);
   }
 
   draw();
@@ -170,7 +170,6 @@ function startOrders() {
   tickMovement();
 }
 
-// Экспортируем для HTML-скрипта
 export {
   selectTool,
   updateSpeed,
