@@ -47,21 +47,21 @@
   <canvas id="grid-canvas" width="480" height="480"></canvas>
 
   <div class="toolbar">
-    <button onclick="selectTool('wall')">🧱 Стена</button>
-    <button onclick="selectTool('start')">🟢 Старт</button>
-    <button onclick="selectTool('goal')">🔴 Финиш</button>
-    <button onclick="addSpawner()">➕ Добавить спавн</button>
-    <button onclick="resetGrid()">♻️ Сброс</button>
+    <button onclick="window.selectTool('wall')">🧱 Стена</button>
+    <button onclick="window.selectTool('start')">🟢 Старт</button>
+    <button onclick="window.selectTool('goal')">🔴 Финиш</button>
+    <button onclick="window.addSpawner()">➕ Добавить спавн</button>
+    <button onclick="window.resetGrid()">♻️ Сброс</button>
 
     <div class="labelled">
       <label>Скорость:</label>
-      <input type="range" id="speedRange" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
-      <input type="number" id="speedInput" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+      <input type="range" id="speedRange" min="1" max="10" value="5" oninput="window.updateSpeed(this.value)">
+      <input type="number" id="speedInput" min="1" max="10" value="5" oninput="window.updateSpeed(this.value)">
     </div>
 
     <div class="labelled">
       <label>Режим перемещения:</label>
-      <select id="moveMode" onchange="updateMoveMode()">
+      <select id="moveMode" onchange="window.updateMoveMode()">
         <option value="4">4 стороны</option>
         <option value="8">8 сторон</option>
       </select>
