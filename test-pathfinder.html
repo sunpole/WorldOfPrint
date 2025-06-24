@@ -47,9 +47,8 @@
   </style>
 </head>
 <body>
-  <h2 align="center">🧭 Pathfinder UI Тест</h2>
+  <h2 align="center">🧝 Pathfinder UI Тест</h2>
   <canvas id="grid-canvas" width="480" height="480"></canvas>
-
   <div class="toolbar">
     <button id="wallBtn">🧱 Стена</button>
     <button id="startBtn">🟢 Старт</button>
@@ -57,13 +56,11 @@
     <button id="addSpawnerBtn">➕ Добавить спавн</button>
     <button id="resetBtn">♻️ Сброс</button>
     <button id="start-move">▶️ Пуск</button>
-
     <div class="labelled">
       <label for="speedRange">Скорость:</label>
       <input type="range" id="speedRange" min="1" max="10" value="5" />
       <input type="number" id="speedInput" min="1" max="10" value="5" />
     </div>
-
     <div class="labelled">
       <label for="moveMode">Режим перемещения:</label>
       <select id="moveMode">
@@ -72,10 +69,7 @@
       </select>
     </div>
   </div>
-
   <div class="log" id="log"></div>
-
-  <!-- Подключаем модуль test-pathfinder.js, он сам импортирует pathfinder.js -->
   <script type="module">
     import {
       selectTool,
@@ -90,24 +84,20 @@
       getPathForSpawner
     } from './test-pathfinder.js';
 
-    // Инициализация логики и состояния
     const logElem = document.getElementById('log');
     const canvas = document.getElementById('grid-canvas');
     const ctx = canvas.getContext('2d');
 
     let currentSpawnerId = 1;
-    let movementMode = 4; // 4 или 8
+    let movementMode = 4;
     let speed = 5;
     let selectedToolName = 'wall';
     let goal = { x: 14, y: 7 };
     let gridWidth = 15;
     let gridHeight = 15;
     const cellSize = 32;
+    let spawnersUI = {};
 
-    // Вспомогательный объект для спавнов в UI (с цветом)
-    let spawnersUI = {}; // {id: {pos: {x,y}, color}}
-
-    // Логирование в div
     function log(message) {
       const time = new Date().toLocaleTimeString();
       logElem.textContent += `[${time}] ${message}\n`;
@@ -115,13 +105,11 @@
       console.info(message);
     }
 
-    // Цвета для спавнов
     function getRandomColor() {
       const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
       return colors[Math.floor(Math.random() * colors.length)];
     }
 
-    // Обновление скорости из UI и модуля
     function onSpeedChange(value) {
       speed = Math.max(1, Math.min(10, parseInt(value)));
       document.getElementById('speedRange').value = speed;
@@ -130,14 +118,11 @@
       log(`Скорость установлена: ${speed}`);
     }
 
-    // Обновление режима перемещения из UI
     function onMoveModeChange() {
       const modeSelect = document.getElementById('moveMode');
       movementMode = parseInt(modeSelect.value);
       updateMoveMode();
       log(`Режим перемещения установлен: ${movementMode} направлений`);
-
-      // Пересчитать пути для всех спавнов с новым режимом
       const useDiagonal = (movementMode === 8);
       for (const id in spawnersUI) {
         setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
@@ -145,49 +130,25 @@
       draw();
     }
 
-    // Отрисовка — просто вызываем экспортированный draw
     function redraw() {
       draw();
     }
 
-    // Обработчик клика на canvas для изменения сетки и добавления объектов
     canvas.addEventListener('click', e => {
       const rect = canvas.getBoundingClientRect();
       const x = Math.floor((e.clientX - rect.left) / cellSize);
       const y = Math.floor((e.clientY - rect.top) / cellSize);
-
       if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return;
-
       switch (selectedToolName) {
-        case 'wall':
-          // Переключаем стену
-          toggleWallAt(x, y);
-          break;
-        case 'goal':
-          goal = { x, y };
-          log(`Новая точка финиша: (${x},${y})`);
-          break;
-        case 'start':
-          addNewSpawner(x, y);
-          break;
+        case 'wall': toggleWallAt(x, y); break;
+        case 'goal': goal = { x, y }; log(`Новая точка финиша: (${x},${y})`); break;
+        case 'start': addNewSpawner(x, y); break;
       }
-
       updateGridState();
       redraw();
     });
 
-    // Переключить стену в координатах
     function toggleWallAt(x, y) {
-      // Получаем текущий grid, меняем клетку с 0 на 1 и наоборот
-      // Для этого вызовем updateGrid с изменённым массивом из test-pathfinder.js
-      // Но у нас grid в test-pathfinder.js приватный, поэтому будем через setPathForSpawner и updateGrid
-      // В твоём тестовом модуле должен быть экспорт updateGrid и функция для изменения grid — используем updateGrid
-      // Но у тебя grid локальный в test-pathfinder.js — здесь храним отдельно?
-
-      // Для простоты — сделаем запрос на обновление сетки из UI
-      // Создадим локальную копию сетки (требуется синхронизация с модулем)
-
-      // Пока храним сетку в UI для синхронизации с модулем:
       if (!window._grid) {
         window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
       }
@@ -196,7 +157,6 @@
       log(`Стена ${window._grid[y][x] === 1 ? 'установлена' : 'удалена'} в (${x},${y})`);
     }
 
-    // Добавить новый спавн
     function addNewSpawner(x, y) {
       const id = `S${currentSpawnerId++}`;
       const color = getRandomColor();
@@ -206,33 +166,16 @@
       log(`Спавн "${id}" добавлен на (${x},${y})`);
     }
 
-    // Обновить grid в модуле
     function updateGridState() {
-      // Обновим пути для всех спавнов
       const useDiagonal = (movementMode === 8);
       for (const id in spawnersUI) {
         setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
       }
     }
 
-    // Обработчики кнопок выбора инструмента
-    document.getElementById('wallBtn').onclick = () => {
-      selectedToolName = 'wall';
-      selectTool('wall');
-      log('Выбран инструмент: Стена');
-    };
-    document.getElementById('startBtn').onclick = () => {
-      selectedToolName = 'start';
-      selectTool('start');
-      log('Выбран инструмент: Старт');
-    };
-    document.getElementById('goalBtn').onclick = () => {
-      selectedToolName = 'goal';
-      selectTool('goal');
-      log('Выбран инструмент: Финиш');
-    };
-
-    // Кнопка сброса
+    document.getElementById('wallBtn').onclick = () => { selectedToolName = 'wall'; selectTool('wall'); log('Выбран инструмент: Стена'); };
+    document.getElementById('startBtn').onclick = () => { selectedToolName = 'start'; selectTool('start'); log('Выбран инструмент: Старт'); };
+    document.getElementById('goalBtn').onclick = () => { selectedToolName = 'goal'; selectTool('goal'); log('Выбран инструмент: Финиш'); };
     document.getElementById('resetBtn').onclick = () => {
       resetGrid();
       window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
@@ -242,8 +185,6 @@
       log('Сетка и спавны сброшены');
       redraw();
     };
-
-    // Кнопка запуска движения
     document.getElementById('start-move').onclick = () => {
       if (Object.keys(spawnersUI).length === 0) {
         log('Нет спавнов для движения');
@@ -252,26 +193,29 @@
       startOrders();
       log('Движение запущено');
     };
+    document.getElementById('speedRange').oninput = e => { onSpeedChange(e.target.value); };
+    document.getElementById('speedInput').onchange = e => { onSpeedChange(e.target.value); };
+    document.getElementById('moveMode').onchange = () => { onMoveModeChange(); };
 
-    // Синхронизация ползунка скорости и поля ввода
-    document.getElementById('speedRange').oninput = e => {
-      onSpeedChange(e.target.value);
-    };
-    document.getElementById('speedInput').onchange = e => {
-      onSpeedChange(e.target.value);
-    };
-
-    // Изменение режима перемещения
-    document.getElementById('moveMode').onchange = () => {
-      onMoveModeChange();
-    };
-
-    // Инициализация стартового состояния
     (function init() {
       window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
       resetGrid();
       redraw();
       log('Инициализация завершена. Выберите инструмент и начните работу.');
+
+      // Проверка наличия всех необходимых функций один раз при инициализации
+      (function verifyFunctions() {
+        if (typeof selectTool !== 'function') log("[❌] Функция `selectTool()` не определена"); else log("[✅] `selectTool()` готова");
+        if (typeof updateSpeed !== 'function') log("[❌] Функция `updateSpeed()` не определена"); else log("[✅] `updateSpeed()` готова");
+        if (typeof updateMoveMode !== 'function') log("[❌] Функция `updateMoveMode()` не определена"); else log("[✅] `updateMoveMode()` готова");
+        if (typeof resetGrid !== 'function') log("[❌] Функция `resetGrid()` не определена"); else log("[✅] `resetGrid()` готова");
+        if (typeof draw !== 'function') log("[❌] Функция `draw()` не определена"); else log("[✅] `draw()` готова");
+        if (typeof startOrders !== 'function') log("[❌] Функция `startOrders()` не определена"); else log("[✅] `startOrders()` готова");
+        if (typeof addSpawner !== 'function') log("[❌] Функция `addSpawner()` не определена"); else log("[✅] `addSpawner()` готова");
+        if (typeof setPathForSpawner !== 'function') log("[❌] Функция `setPathForSpawner()` не определена"); else log("[✅] `setPathForSpawner()` готова");
+        if (typeof updateGrid !== 'function') log("[❌] Функция `updateGrid()` не определена"); else log("[✅] `updateGrid()` готова");
+        if (typeof getPathForSpawner !== 'function') log("[❌] Функция `getPathForSpawner()` не определена"); else log("[✅] `getPathForSpawner()` готова");
+      })();
     })();
   </script>
 </body>
