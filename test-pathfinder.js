@@ -47,10 +47,11 @@ function updateSpeed(val) {
 
 function updateMoveMode() {
   movementMode = parseInt(moveModeSelect.value);
-  const useDiagonal = (movementMode === 8);
+  const useDiagonal = (movementMode === 8 || movementMode === 9); // 9 — без углов
+  const allowCornerCutting = (movementMode !== 9); // если 9, то углы запрещены
   console.log('[🧭] Режим перемещения:', movementMode);
   for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal);
+    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal, allowCornerCutting);
   }
   draw();
 }
@@ -134,6 +135,9 @@ canvas.addEventListener('click', e => {
 
   if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return;
 
+  const useDiagonal = (movementMode === 8 || movementMode === 9);
+  const allowCornerCutting = (movementMode !== 9);
+
   switch (selectedTool) {
     case 'wall':
       grid[y][x] = grid[y][x] === 1 ? 0 : 1;
@@ -145,15 +149,13 @@ canvas.addEventListener('click', e => {
       const id = `S${currentSpawnerId++}`;
       const color = getRandomColor();
       spawners[id] = { pos: { x, y }, color };
-      const useDiagonal = (movementMode === 8);
-      addSpawner(id, { x, y }, goal, useDiagonal);
+      addSpawner(id, { x, y }, goal, useDiagonal, allowCornerCutting);
       break;
   }
 
   updateGrid(grid);
-  const useDiagonal = (movementMode === 8);
   for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal);
+    setPathForSpawner(id, spawners[id].pos, goal, useDiagonal, allowCornerCutting);
   }
 
   draw();
