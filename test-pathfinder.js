@@ -9,40 +9,62 @@ import {
   getDebugOverlay,
   setPathForSpawner,
   applyEffectToPosition,
-  getAllPaths,
   setMovementMode
-} from '../core/pathfinder.js';
+} from './pathfinder.js';
 
 const GRID_WIDTH = 15;
 const GRID_HEIGHT = 15;
 const CELL_SIZE = 32;
+
 const canvas = document.getElementById('grid-canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = GRID_WIDTH * CELL_SIZE;
 canvas.height = GRID_HEIGHT * CELL_SIZE;
 
 let grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
-let spawners = {};
+let spawners = {}; // id: { pos: {x,y}, color }
 let goal = { x: 14, y: 7 };
 let selectedTool = 'wall';
 let currentSpawnerId = 1;
 let movementMode = 4; // 4 или 8 направлений
-let speed = 1;
+let speed = 5;
 
-const speedSlider = document.getElementById('speed-slider');
-const speedValue = document.getElementById('speed-value');
+const speedRange = document.getElementById('speedRange');
+const speedInput = document.getElementById('speedInput');
 
-speedSlider.addEventListener('input', () => {
-  speed = parseFloat(speedSlider.value);
-  speedValue.textContent = speed;
-});
+function updateSpeed(val) {
+  speed = Math.max(1, Math.min(10, parseInt(val)));
+  speedRange.value = speed;
+  speedInput.value = speed;
+}
 
-// Инициализация
-initPathfinder(grid);
-addSpawner(currentSpawnerId, { x: 0, y: 7 });
-setPathForSpawner(currentSpawnerId, { x: 0, y: 7 }, goal, movementMode);
+function updateMoveMode() {
+  const mode = parseInt(document.getElementById('moveMode').value);
+  movementMode = mode;
+  setMovementMode(mode);
+  for (const id in spawners) {
+    setPathForSpawner(id, spawners[id].pos, goal, movementMode);
+  }
+  draw();
+}
 
-// Обновление и отрисовка
+function selectTool(tool) {
+  selectedTool = tool;
+}
+
+function resetGrid() {
+  grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
+  spawners = {};
+  currentSpawnerId = 1;
+  updateGrid(grid);
+  draw();
+}
+
+function getRandomColor() {
+  const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -52,7 +74,7 @@ function draw() {
         ctx.fillStyle = '#444';
         ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
       }
-      ctx.strokeStyle = '#ccc';
+      ctx.strokeStyle = '#555';
       ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
   }
@@ -78,11 +100,16 @@ function draw() {
       ctx.stroke();
     }
   }
+
+  drawOrders();
 }
 
 canvas.addEventListener('click', e => {
-  const x = Math.floor(e.offsetX / CELL_SIZE);
-  const y = Math.floor(e.offsetY / CELL_SIZE);
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+  const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+
+  if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return;
 
   switch (selectedTool) {
     case 'wall':
@@ -94,9 +121,8 @@ canvas.addEventListener('click', e => {
     case 'start':
       const id = `S${currentSpawnerId++}`;
       const color = getRandomColor();
-      spawners[id] = { pos: { x, y }, color, path: [] };
+      spawners[id] = { pos: { x, y }, color };
       addSpawner(id, { x, y });
-      setPathForSpawner(id, { x, y }, goal, movementMode);
       break;
   }
 
@@ -108,40 +134,6 @@ canvas.addEventListener('click', e => {
   draw();
 });
 
-document.getElementById('tool-wall').onclick = () => selectedTool = 'wall';
-document.getElementById('tool-start').onclick = () => selectedTool = 'start';
-document.getElementById('tool-goal').onclick = () => selectedTool = 'goal';
-document.getElementById('mode-4').onclick = () => {
-  movementMode = 4;
-  setMovementMode(4);
-  for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, 4);
-  }
-  draw();
-};
-document.getElementById('mode-8').onclick = () => {
-  movementMode = 8;
-  setMovementMode(8);
-  for (const id in spawners) {
-    setPathForSpawner(id, spawners[id].pos, goal, 8);
-  }
-  draw();
-};
-
-document.getElementById('reset-btn').onclick = () => {
-  grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
-  spawners = {};
-  currentSpawnerId = 1;
-  updateGrid(grid);
-  draw();
-};
-
-function getRandomColor() {
-  const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-// Пошаговое перемещение заказов
 let orders = [];
 function tickMovement() {
   orders.forEach(order => {
@@ -151,7 +143,7 @@ function tickMovement() {
       order.pos = path[order.index];
     }
   });
-  drawOrders();
+  draw();
   setTimeout(tickMovement, 1000 / speed);
 }
 
@@ -169,13 +161,21 @@ function drawOrders() {
   });
 }
 
-document.getElementById('start-move').onclick = () => {
+function startOrders() {
   orders = Object.keys(spawners).map(id => ({
     id,
     pos: { ...spawners[id].pos },
     index: 0
   }));
   tickMovement();
-};
+}
 
-draw();
+// Экспортируем для HTML-скрипта
+export {
+  selectTool,
+  updateSpeed,
+  updateMoveMode,
+  resetGrid,
+  draw,
+  startOrders
+};
