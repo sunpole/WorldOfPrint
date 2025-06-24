@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Pathfinder Test</title>
   <style>
     body { background: #111; color: white; font-family: sans-serif; margin: 0; padding: 0; }
@@ -24,11 +24,13 @@
       color: white;
       border: 1px solid #666;
       border-radius: 4px;
+      cursor: pointer;
     }
     .labelled {
       display: flex;
       align-items: center;
       gap: 4px;
+      color: white;
     }
     .log {
       max-width: 800px;
@@ -39,6 +41,8 @@
       height: 100px;
       overflow-y: auto;
       border-top: 1px solid #333;
+      white-space: pre-wrap;
+      font-family: monospace;
     }
   </style>
 </head>
@@ -55,13 +59,13 @@
     <button id="start-move">▶️ Пуск</button>
 
     <div class="labelled">
-      <label>Скорость:</label>
-      <input type="range" id="speedRange" min="1" max="10" value="5">
-      <input type="number" id="speedInput" min="1" max="10" value="5">
+      <label for="speedRange">Скорость:</label>
+      <input type="range" id="speedRange" min="1" max="10" value="5" />
+      <input type="number" id="speedInput" min="1" max="10" value="5" />
     </div>
 
     <div class="labelled">
-      <label>Режим перемещения:</label>
+      <label for="moveMode">Режим перемещения:</label>
       <select id="moveMode">
         <option value="4">4 стороны</option>
         <option value="8">8 сторон</option>
@@ -72,6 +76,203 @@
   <div class="log" id="log"></div>
 
   <!-- Подключаем модуль test-pathfinder.js, он сам импортирует pathfinder.js -->
-  <script type="module" src="./test-pathfinder.js"></script>
+  <script type="module">
+    import {
+      selectTool,
+      updateSpeed,
+      updateMoveMode,
+      resetGrid,
+      draw,
+      startOrders,
+      addSpawner,
+      setPathForSpawner,
+      updateGrid,
+      getPathForSpawner
+    } from './test-pathfinder.js';
+
+    // Инициализация логики и состояния
+    const logElem = document.getElementById('log');
+    const canvas = document.getElementById('grid-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentSpawnerId = 1;
+    let movementMode = 4; // 4 или 8
+    let speed = 5;
+    let selectedToolName = 'wall';
+    let goal = { x: 14, y: 7 };
+    let gridWidth = 15;
+    let gridHeight = 15;
+    const cellSize = 32;
+
+    // Вспомогательный объект для спавнов в UI (с цветом)
+    let spawnersUI = {}; // {id: {pos: {x,y}, color}}
+
+    // Логирование в div
+    function log(message) {
+      const time = new Date().toLocaleTimeString();
+      logElem.textContent += `[${time}] ${message}\n`;
+      logElem.scrollTop = logElem.scrollHeight;
+      console.info(message);
+    }
+
+    // Цвета для спавнов
+    function getRandomColor() {
+      const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Обновление скорости из UI и модуля
+    function onSpeedChange(value) {
+      speed = Math.max(1, Math.min(10, parseInt(value)));
+      document.getElementById('speedRange').value = speed;
+      document.getElementById('speedInput').value = speed;
+      updateSpeed(speed);
+      log(`Скорость установлена: ${speed}`);
+    }
+
+    // Обновление режима перемещения из UI
+    function onMoveModeChange() {
+      const modeSelect = document.getElementById('moveMode');
+      movementMode = parseInt(modeSelect.value);
+      updateMoveMode();
+      log(`Режим перемещения установлен: ${movementMode} направлений`);
+
+      // Пересчитать пути для всех спавнов с новым режимом
+      const useDiagonal = (movementMode === 8);
+      for (const id in spawnersUI) {
+        setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
+      }
+      draw();
+    }
+
+    // Отрисовка — просто вызываем экспортированный draw
+    function redraw() {
+      draw();
+    }
+
+    // Обработчик клика на canvas для изменения сетки и добавления объектов
+    canvas.addEventListener('click', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / cellSize);
+      const y = Math.floor((e.clientY - rect.top) / cellSize);
+
+      if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return;
+
+      switch (selectedToolName) {
+        case 'wall':
+          // Переключаем стену
+          toggleWallAt(x, y);
+          break;
+        case 'goal':
+          goal = { x, y };
+          log(`Новая точка финиша: (${x},${y})`);
+          break;
+        case 'start':
+          addNewSpawner(x, y);
+          break;
+      }
+
+      updateGridState();
+      redraw();
+    });
+
+    // Переключить стену в координатах
+    function toggleWallAt(x, y) {
+      // Получаем текущий grid, меняем клетку с 0 на 1 и наоборот
+      // Для этого вызовем updateGrid с изменённым массивом из test-pathfinder.js
+      // Но у нас grid в test-pathfinder.js приватный, поэтому будем через setPathForSpawner и updateGrid
+      // В твоём тестовом модуле должен быть экспорт updateGrid и функция для изменения grid — используем updateGrid
+      // Но у тебя grid локальный в test-pathfinder.js — здесь храним отдельно?
+
+      // Для простоты — сделаем запрос на обновление сетки из UI
+      // Создадим локальную копию сетки (требуется синхронизация с модулем)
+
+      // Пока храним сетку в UI для синхронизации с модулем:
+      if (!window._grid) {
+        window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+      }
+      window._grid[y][x] = window._grid[y][x] === 1 ? 0 : 1;
+      updateGrid(window._grid);
+      log(`Стена ${window._grid[y][x] === 1 ? 'установлена' : 'удалена'} в (${x},${y})`);
+    }
+
+    // Добавить новый спавн
+    function addNewSpawner(x, y) {
+      const id = `S${currentSpawnerId++}`;
+      const color = getRandomColor();
+      spawnersUI[id] = { pos: { x, y }, color };
+      const useDiagonal = (movementMode === 8);
+      addSpawner(id, { x, y }, goal, useDiagonal);
+      log(`Спавн "${id}" добавлен на (${x},${y})`);
+    }
+
+    // Обновить grid в модуле
+    function updateGridState() {
+      // Обновим пути для всех спавнов
+      const useDiagonal = (movementMode === 8);
+      for (const id in spawnersUI) {
+        setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
+      }
+    }
+
+    // Обработчики кнопок выбора инструмента
+    document.getElementById('wallBtn').onclick = () => {
+      selectedToolName = 'wall';
+      selectTool('wall');
+      log('Выбран инструмент: Стена');
+    };
+    document.getElementById('startBtn').onclick = () => {
+      selectedToolName = 'start';
+      selectTool('start');
+      log('Выбран инструмент: Старт');
+    };
+    document.getElementById('goalBtn').onclick = () => {
+      selectedToolName = 'goal';
+      selectTool('goal');
+      log('Выбран инструмент: Финиш');
+    };
+
+    // Кнопка сброса
+    document.getElementById('resetBtn').onclick = () => {
+      resetGrid();
+      window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+      spawnersUI = {};
+      currentSpawnerId = 1;
+      goal = { x: 14, y: 7 };
+      log('Сетка и спавны сброшены');
+      redraw();
+    };
+
+    // Кнопка запуска движения
+    document.getElementById('start-move').onclick = () => {
+      if (Object.keys(spawnersUI).length === 0) {
+        log('Нет спавнов для движения');
+        return;
+      }
+      startOrders();
+      log('Движение запущено');
+    };
+
+    // Синхронизация ползунка скорости и поля ввода
+    document.getElementById('speedRange').oninput = e => {
+      onSpeedChange(e.target.value);
+    };
+    document.getElementById('speedInput').onchange = e => {
+      onSpeedChange(e.target.value);
+    };
+
+    // Изменение режима перемещения
+    document.getElementById('moveMode').onchange = () => {
+      onMoveModeChange();
+    };
+
+    // Инициализация стартового состояния
+    (function init() {
+      window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+      resetGrid();
+      redraw();
+      log('Инициализация завершена. Выберите инструмент и начните работу.');
+    })();
+  </script>
 </body>
 </html>
