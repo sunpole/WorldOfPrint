@@ -291,16 +291,31 @@ function neighbors4(pos) {
 
 /** Соседи по 8 направлениям */
 function neighbors8(pos) {
-  return [
-    { x: pos.x, y: pos.y - 1 },     // вверх
-    { x: pos.x + 1, y: pos.y - 1 }, // верх-вправо
-    { x: pos.x + 1, y: pos.y },     // вправо
-    { x: pos.x + 1, y: pos.y + 1 }, // вниз-вправо
-    { x: pos.x, y: pos.y + 1 },     // вниз
-    { x: pos.x - 1, y: pos.y + 1 }, // вниз-влево
-    { x: pos.x - 1, y: pos.y },     // влево
-    { x: pos.x - 1, y: pos.y - 1 }, // вверх-влево
-  ].filter(p => p.y >= 0 && p.y < grid.length && p.x >= 0 && p.x < grid[0].length);
+  const directions = [
+    [0, -1],  [1, -1],  [1, 0],  [1, 1],
+    [0, 1],   [-1, 1],  [-1, 0], [-1, -1]
+  ];
+
+  const result = [];
+
+  for (const [dx, dy] of directions) {
+    const nx = pos.x + dx;
+    const ny = pos.y + dy;
+
+    if (ny < 0 || ny >= grid.length || nx < 0 || nx >= grid[0].length) continue;
+    if (grid[ny][nx] !== 0) continue; // нельзя идти в стену
+
+    // Для диагоналей — проверка "сквозь стену"
+    if (dx !== 0 && dy !== 0) {
+      const neighbor1 = grid[pos.y][pos.x + dx]; // горизонталь
+      const neighbor2 = grid[pos.y + dy][pos.x]; // вертикаль
+      if (neighbor1 !== 0 || neighbor2 !== 0) continue; // блокируем диагональ, если хотя бы одна сторона — стена
+    }
+
+    result.push({ x: nx, y: ny });
+  }
+
+  return result;
 }
 
 /** Восстановление пути по cameFrom */
