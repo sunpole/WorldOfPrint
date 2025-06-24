@@ -2,35 +2,74 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Test Pathfinder</title>
+  <title>Pathfinder Test</title>
   <style>
-    body { background: #1a1a1a; color: white; font-family: sans-serif; }
-    #grid-canvas { border: 1px solid #999; background: #222; display: block; margin: 10px auto; }
-    .toolbar { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-    button { padding: 6px 12px; }
+    body { background: #111; color: white; font-family: sans-serif; margin: 0; padding: 0; }
+    canvas { display: block; margin: 20px auto; background: #222; border: 1px solid #666; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 10px auto;
+      max-width: 800px;
+    }
+    .toolbar > * {
+      margin: 4px;
+    }
+    button, select, input[type="number"] {
+      padding: 6px;
+      font-size: 14px;
+      background: #333;
+      color: white;
+      border: 1px solid #666;
+      border-radius: 4px;
+    }
+    .labelled {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .log {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1a1a1a;
+      padding: 10px;
+      font-size: 12px;
+      height: 100px;
+      overflow-y: auto;
+      border-top: 1px solid #333;
+    }
   </style>
 </head>
 <body>
-
-  <h2 align="center">🧭 Pathfinder Test</h2>
-
-  <canvas id="grid-canvas"></canvas>
+  <h2 align="center">🧭 Pathfinder UI Тест</h2>
+  <canvas id="grid-canvas" width="480" height="480"></canvas>
 
   <div class="toolbar">
     <button onclick="selectTool('wall')">🧱 Стена</button>
     <button onclick="selectTool('start')">🟢 Старт</button>
     <button onclick="selectTool('goal')">🔴 Финиш</button>
-    <button onclick="reset()">♻️ Сброс</button>
+    <button onclick="addSpawner()">➕ Добавить спавн</button>
+    <button onclick="resetGrid()">♻️ Сброс</button>
+
+    <div class="labelled">
+      <label>Скорость:</label>
+      <input type="range" id="speedRange" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+      <input type="number" id="speedInput" min="1" max="10" value="5" oninput="updateSpeed(this.value)">
+    </div>
+
+    <div class="labelled">
+      <label>Режим перемещения:</label>
+      <select id="moveMode" onchange="updateMoveMode()">
+        <option value="4">4 стороны</option>
+        <option value="8">8 сторон</option>
+      </select>
+    </div>
   </div>
 
+  <div class="log" id="log"></div>
+
   <script type="module" src="./test-pathfinder.js"></script>
-  <script>
-    function selectTool(tool) {
-      window.selectedTool = tool;
-    }
-    function reset() {
-      location.reload();
-    }
-  </script>
 </body>
 </html>
