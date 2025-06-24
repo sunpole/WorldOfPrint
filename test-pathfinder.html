@@ -2,74 +2,107 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>03 Pathfinder Test</title>
+  <title>Pathfinder Test UI</title>
   <style>
-    body { background: #111; color: white; font-family: sans-serif; margin: 0; padding: 0; }
-    canvas { display: block; margin: 20px auto; background: #222; border: 1px solid #666; }
+    body {
+      background: #1e1e1e;
+      color: #eee;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    h1 {
+      margin: 20px 0 10px;
+      font-weight: 600;
+    }
+    canvas {
+      background: #2a2a2a;
+      border: 2px solid #444;
+      margin-bottom: 10px;
+      image-rendering: pixelated;
+    }
     .toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
       justify-content: center;
-      margin: 10px auto;
-      max-width: 800px;
+      gap: 12px;
+      margin-bottom: 15px;
+      max-width: 720px;
     }
-    .toolbar > * {
-      margin: 4px;
-    }
-    button, select, input[type="number"] {
-      padding: 6px;
-      font-size: 14px;
+    button, select, input[type="range"], input[type="number"] {
       background: #333;
-      color: white;
-      border: 1px solid #666;
+      color: #eee;
+      border: 1px solid #555;
       border-radius: 4px;
+      padding: 8px 14px;
+      font-size: 14px;
       cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease;
+    }
+    button:hover, select:hover, input[type="range"]:hover, input[type="number"]:hover {
+      background: #555;
+    }
+    button:active {
+      background: #777;
     }
     .labelled {
       display: flex;
       align-items: center;
-      gap: 4px;
-      color: white;
+      gap: 6px;
+      color: #ddd;
+      font-size: 14px;
+      user-select: none;
     }
     .log {
-      max-width: 800px;
-      margin: 0 auto;
-      background: #1a1a1a;
+      width: 720px;
+      max-height: 140px;
+      background: #222;
+      border: 1px solid #444;
+      border-radius: 4px;
       padding: 10px;
-      font-size: 12px;
-      height: 100px;
-      overflow-y: auto;
-      border-top: 1px solid #333;
-      white-space: pre-wrap;
       font-family: monospace;
+      font-size: 13px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: #ccc;
+      box-sizing: border-box;
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
-  <h2 align="center">03 🧝 Pathfinder UI Тест</h2>
-  <canvas id="grid-canvas" width="480" height="480"></canvas>
+  <h1>Pathfinder UI — Тест поиска пути</h1>
+  <canvas id="grid-canvas" width="480" height="480" style="width:480px; height:480px;"></canvas>
+  
   <div class="toolbar">
-    <button id="wallBtn">🧱 Стена</button>
-    <button id="startBtn">🟢 Старт</button>
-    <button id="goalBtn">🔴 Финиш</button>
-    <button id="addSpawnerBtn">➕ Добавить спавн</button>
-    <button id="resetBtn">♻️ Сброс</button>
-    <button id="start-move">▶️ Пуск</button>
-    <div class="labelled">
+    <button id="wallBtn" title="Инструмент: Стена">🧱 Стена</button>
+    <button id="startBtn" title="Инструмент: Начало">🟢 Старт</button>
+    <button id="goalBtn" title="Инструмент: Финиш">🔴 Финиш</button>
+    <button id="resetBtn" title="Сброс сетки и спавнов">♻️ Сброс</button>
+    <button id="start-move" title="Запустить движение заказов">▶️ Пуск</button>
+    
+    <div class="labelled" style="min-width: 190px;">
       <label for="speedRange">Скорость:</label>
       <input type="range" id="speedRange" min="1" max="10" value="5" />
-      <input type="number" id="speedInput" min="1" max="10" value="5" />
+      <input type="number" id="speedInput" min="1" max="10" value="5" style="width: 48px;" />
     </div>
-    <div class="labelled">
+    
+    <div class="labelled" style="min-width: 160px;">
       <label for="moveMode">Режим перемещения:</label>
       <select id="moveMode">
-        <option value="4">4 стороны</option>
-        <option value="8">8 сторон</option>
+        <option value="4">4 направления</option>
+        <option value="8">8 направлений</option>
       </select>
     </div>
   </div>
-  <div class="log" id="log"></div>
+  
+  <div id="log" class="log" aria-live="polite" aria-atomic="true"></div>
+
   <script type="module">
     import {
       selectTool,
@@ -88,14 +121,15 @@
     const canvas = document.getElementById('grid-canvas');
     const ctx = canvas.getContext('2d');
 
+    const gridWidth = 15;
+    const gridHeight = 15;
+    const cellSize = 32;
+
     let currentSpawnerId = 1;
     let movementMode = 4;
     let speed = 5;
     let selectedToolName = 'wall';
     let goal = { x: 14, y: 7 };
-    let gridWidth = 15;
-    let gridHeight = 15;
-    const cellSize = 32;
     let spawnersUI = {};
 
     function log(message) {
@@ -141,7 +175,10 @@
       if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return;
       switch (selectedToolName) {
         case 'wall': toggleWallAt(x, y); break;
-        case 'goal': goal = { x, y }; log(`Новая точка финиша: (${x},${y})`); break;
+        case 'goal':
+          goal = { x, y };
+          log(`Новая точка финиша: (${x},${y})`);
+          break;
         case 'start': addNewSpawner(x, y); break;
       }
       updateGridState();
@@ -173,9 +210,21 @@
       }
     }
 
-    document.getElementById('wallBtn').onclick = () => { selectedToolName = 'wall'; selectTool('wall'); log('Выбран инструмент: Стена'); };
-    document.getElementById('startBtn').onclick = () => { selectedToolName = 'start'; selectTool('start'); log('Выбран инструмент: Старт'); };
-    document.getElementById('goalBtn').onclick = () => { selectedToolName = 'goal'; selectTool('goal'); log('Выбран инструмент: Финиш'); };
+    document.getElementById('wallBtn').onclick = () => {
+      selectedToolName = 'wall';
+      selectTool('wall');
+      log('Выбран инструмент: Стена');
+    };
+    document.getElementById('startBtn').onclick = () => {
+      selectedToolName = 'start';
+      selectTool('start');
+      log('Выбран инструмент: Старт');
+    };
+    document.getElementById('goalBtn').onclick = () => {
+      selectedToolName = 'goal';
+      selectTool('goal');
+      log('Выбран инструмент: Финиш');
+    };
     document.getElementById('resetBtn').onclick = () => {
       resetGrid();
       window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
