@@ -1,4 +1,4 @@
-// test-pathfinder.js
+// test-pathfinder.js — UI для тестирования pathfinder.js
 
 import {
   initPathfinder,
@@ -11,36 +11,44 @@ import {
   applyEffectToPosition,
 } from './pathfinder.js';
 
+// === Константы ===
 const GRID_WIDTH = 15;
 const GRID_HEIGHT = 15;
 const CELL_SIZE = 32;
 
+// === DOM элементы ===
 const canvas = document.getElementById('grid-canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = GRID_WIDTH * CELL_SIZE;
 canvas.height = GRID_HEIGHT * CELL_SIZE;
 
+const speedRange = document.getElementById('speedRange');
+const speedInput = document.getElementById('speedInput');
+const moveModeSelect = document.getElementById('moveMode');
+
+// === Состояния ===
 let grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
-let spawners = {}; // id: { pos: {x,y}, color }
+let spawners = {}; // ключ: id спавнера, значение: { pos, color }
 let goal = { x: 14, y: 7 };
 let selectedTool = 'wall';
 let currentSpawnerId = 1;
-let movementMode = 4; // 4 или 8 направлений
+let movementMode = 4;
 let speed = 5;
+let orders = [];
+let moveTimer = null;
 
-const speedRange = document.getElementById('speedRange');
-const speedInput = document.getElementById('speedInput');
-
+// === UI Функции ===
 function updateSpeed(val) {
   speed = Math.max(1, Math.min(10, parseInt(val)));
   speedRange.value = speed;
   speedInput.value = speed;
+  console.log('[⚙️] Установлена скорость:', speed);
 }
 
 function updateMoveMode() {
-  const mode = parseInt(document.getElementById('moveMode').value);
-  movementMode = mode;
+  movementMode = parseInt(moveModeSelect.value);
   const useDiagonal = (movementMode === 8);
+  console.log('[🧭] Режим перемещения:', movementMode);
   for (const id in spawners) {
     setPathForSpawner(id, spawners[id].pos, goal, useDiagonal);
   }
@@ -49,6 +57,7 @@ function updateMoveMode() {
 
 function selectTool(tool) {
   selectedTool = tool;
+  console.log('[🛠️] Выбран инструмент:', tool);
 }
 
 function resetGrid() {
@@ -57,11 +66,26 @@ function resetGrid() {
   currentSpawnerId = 1;
   updateGrid(grid);
   draw();
+  console.log('[🔄] Сброс сетки и спавнеров');
 }
 
 function getRandomColor() {
   const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function drawOrders() {
+  orders.forEach(order => {
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(
+      order.pos.x * CELL_SIZE + CELL_SIZE / 2,
+      order.pos.y * CELL_SIZE + CELL_SIZE / 2,
+      CELL_SIZE / 4,
+      0, 2 * Math.PI
+    );
+    ctx.fill();
+  });
 }
 
 function draw() {
@@ -73,7 +97,7 @@ function draw() {
         ctx.fillStyle = '#444';
         ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
       }
-      ctx.strokeStyle = '#555';
+      ctx.strokeStyle = '#aaa';
       ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     }
   }
@@ -135,8 +159,6 @@ canvas.addEventListener('click', e => {
   draw();
 });
 
-let orders = [];
-let moveTimer = null;
 function tickMovement() {
   let stillMoving = false;
   orders.forEach(order => {
@@ -152,20 +174,6 @@ function tickMovement() {
   else moveTimer = null;
 }
 
-function drawOrders() {
-  orders.forEach(order => {
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.arc(
-      order.pos.x * CELL_SIZE + CELL_SIZE / 2,
-      order.pos.y * CELL_SIZE + CELL_SIZE / 2,
-      CELL_SIZE / 4,
-      0, 2 * Math.PI
-    );
-    ctx.fill();
-  });
-}
-
 function startOrders() {
   if (moveTimer) clearTimeout(moveTimer);
   orders = Object.keys(spawners).map(id => ({
@@ -173,28 +181,62 @@ function startOrders() {
     pos: { ...spawners[id].pos },
     index: 0
   }));
+  console.log('[🚀] Запуск заказов:', orders);
   tickMovement();
+}
+
+function initUI() {
+  document.getElementById('resetBtn')?.addEventListener('click', resetGrid);
+  document.getElementById('runBtn')?.addEventListener('click', startOrders);
+
+  ['wall', 'goal', 'start'].forEach(tool => {
+    document.getElementById(`tool-${tool}`)?.addEventListener('click', () => selectTool(tool));
+  });
+
+  moveModeSelect?.addEventListener('change', updateMoveMode);
+  speedRange?.addEventListener('input', e => updateSpeed(e.target.value));
+  speedInput?.addEventListener('change', e => updateSpeed(e.target.value));
+
+  updateSpeed(speed);
+  updateMoveMode();
+  resetGrid();
+
+  console.log('[✅] UI инициализирован');
 }
 
 (function verifyFunctions() {
   const log = console.log;
-  if (typeof selectTool !== 'function') log("[❌] Функция `selectTool()` не определена"); else log("[✅] `selectTool()` готова");
-  if (typeof updateSpeed !== 'function') log("[❌] Функция `updateSpeed()` не определена"); else log("[✅] `updateSpeed()` готова");
-  if (typeof updateMoveMode !== 'function') log("[❌] Функция `updateMoveMode()` не определена"); else log("[✅] `updateMoveMode()` готова");
-  if (typeof resetGrid !== 'function') log("[❌] Функция `resetGrid()` не определена"); else log("[✅] `resetGrid()` готова");
-  if (typeof draw !== 'function') log("[❌] Функция `draw()` не определена"); else log("[✅] `draw()` готова");
-  if (typeof startOrders !== 'function') log("[❌] Функция `startOrders()` не определена"); else log("[✅] `startOrders()` готова");
-  if (typeof addSpawner !== 'function') log("[❌] Функция `addSpawner()` не определена"); else log("[✅] `addSpawner()` готова");
-  if (typeof setPathForSpawner !== 'function') log("[❌] Функция `setPathForSpawner()` не определена"); else log("[✅] `setPathForSpawner()` готова");
-  if (typeof updateGrid !== 'function') log("[❌] Функция `updateGrid()` не определена"); else log("[✅] `updateGrid()` готова");
-  if (typeof getPathForSpawner !== 'function') log("[❌] Функция `getPathForSpawner()` не определена"); else log("[✅] `getPathForSpawner()` готова");
+  const tests = {
+    selectTool,
+    updateSpeed,
+    updateMoveMode,
+    resetGrid,
+    draw,
+    startOrders,
+    addSpawner,
+    setPathForSpawner,
+    updateGrid,
+    getPathForSpawner
+  };
+  for (const name in tests) {
+    if (typeof tests[name] !== 'function') log(`[❌] Функция \\`${name}()\\` не определена`);
+    else log(`[✅] \\`${name}()\\` готова`);
+  }
 })();
 
+// === Экспорт для отладки ===
 export {
   selectTool,
   updateSpeed,
   updateMoveMode,
   resetGrid,
   draw,
-  startOrders
+  startOrders,
+  addSpawner,
+  setPathForSpawner,
+  updateGrid,
+  getPathForSpawner
 };
+
+// === Запуск ===
+initUI();
