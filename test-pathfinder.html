@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Pathfinder</title>
+  <style>
+    body { background: #1a1a1a; color: white; font-family: sans-serif; }
+    #grid-canvas { border: 1px solid #999; background: #222; display: block; margin: 10px auto; }
+    .toolbar { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+    button { padding: 6px 12px; }
+  </style>
+</head>
+<body>
+
+  <h2 align="center">🧭 Pathfinder Test</h2>
+
+  <canvas id="grid-canvas"></canvas>
+
+  <div class="toolbar">
+    <button onclick="selectTool('wall')">🧱 Стена</button>
+    <button onclick="selectTool('start')">🟢 Старт</button>
+    <button onclick="selectTool('goal')">🔴 Финиш</button>
+    <button onclick="reset()">♻️ Сброс</button>
+  </div>
+
+  <script type="module" src="./test-pathfinder.js"></script>
+  <script>
+    function selectTool(tool) {
+      window.selectedTool = tool;
+    }
+    function reset() {
+      location.reload();
+    }
+  </script>
+</body>
+</html>
