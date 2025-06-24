@@ -1,4 +1,4 @@
-//test-pathfinder.js
+// test-pathfinder.js
 
 import {
   initPathfinder,
@@ -175,6 +175,20 @@ function startOrders() {
   }));
   tickMovement();
 }
+
+(function verifyFunctions() {
+  const log = console.log;
+  if (typeof selectTool !== 'function') log("[❌] Функция `selectTool()` не определена"); else log("[✅] `selectTool()` готова");
+  if (typeof updateSpeed !== 'function') log("[❌] Функция `updateSpeed()` не определена"); else log("[✅] `updateSpeed()` готова");
+  if (typeof updateMoveMode !== 'function') log("[❌] Функция `updateMoveMode()` не определена"); else log("[✅] `updateMoveMode()` готова");
+  if (typeof resetGrid !== 'function') log("[❌] Функция `resetGrid()` не определена"); else log("[✅] `resetGrid()` готова");
+  if (typeof draw !== 'function') log("[❌] Функция `draw()` не определена"); else log("[✅] `draw()` готова");
+  if (typeof startOrders !== 'function') log("[❌] Функция `startOrders()` не определена"); else log("[✅] `startOrders()` готова");
+  if (typeof addSpawner !== 'function') log("[❌] Функция `addSpawner()` не определена"); else log("[✅] `addSpawner()` готова");
+  if (typeof setPathForSpawner !== 'function') log("[❌] Функция `setPathForSpawner()` не определена"); else log("[✅] `setPathForSpawner()` готова");
+  if (typeof updateGrid !== 'function') log("[❌] Функция `updateGrid()` не определена"); else log("[✅] `updateGrid()` готова");
+  if (typeof getPathForSpawner !== 'function') log("[❌] Функция `getPathForSpawner()` не определена"); else log("[✅] `getPathForSpawner()` готова");
+})();
 
 export {
   selectTool,
