@@ -123,11 +123,15 @@
       log(`Скорость установлена: ${speed}`);
     }
 
-    function onMoveModeChange() {
+   function onMoveModeChange() {
   const modeSelect = document.getElementById('moveMode');
   movementMode = modeSelect.value;  // строка: '4', '8', '8nc', '16', '32'
-  updateMoveMode();
-  log(`Режим перемещения установлен: ${movementMode} направлений`);
+  updateMoveMode(movementMode); // Передаем текущий режим
+
+  // Для корректного отображения режима в логе берём текст выбранного option
+  const modeText = modeSelect.options[modeSelect.selectedIndex].text;
+  log(`Режим перемещения установлен: ${modeText}`);
+
   for (const id in spawnersUI) {
     setPathForSpawner(id, spawnersUI[id].pos, goal, movementMode);
   }
@@ -135,30 +139,31 @@
 }
 
 
-    canvas.addEventListener('click', e => {
-      const rect = canvas.getBoundingClientRect();
-      const x = Math.floor((e.clientX - rect.left) / cellSize);
-      const y = Math.floor((e.clientY - rect.top) / cellSize);
-      if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return;
-      switch (selectedToolName) {
-        case 'wall': toggleWallAt(x, y); break;
-        case 'goal': goal = { x, y }; log(`Новая точка финиша: (${x},${y})`); break;
-        case 'start': addNewSpawner(x, y); break;
-      }
-      updateGridState();
-      redraw();
-    });
 
-    function toggleWallAt(x, y) {
-      if (!window._grid) {
-        window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
-      }
-      window._grid[y][x] = window._grid[y][x] === 1 ? 0 : 1;
-      updateGrid(window._grid);
-      log(`Стена ${window._grid[y][x] === 1 ? 'установлена' : 'удалена'} в (${x},${y})`);
-    }
+   canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / cellSize);
+  const y = Math.floor((e.clientY - rect.top) / cellSize);
+  if (x < 0 || y < 0 || x >= gridWidth || y >= gridHeight) return;
+  switch (selectedToolName) {
+    case 'wall': toggleWallAt(x, y); break;
+    case 'goal': goal = { x, y }; log(`Новая точка финиша: (${x},${y})`); break;
+    case 'start': addNewSpawner(x, y); break;
+  }
+  updateGridState();
+  draw();
+});
 
-    function addNewSpawner(x, y) {
+function toggleWallAt(x, y) {
+  if (!window._grid) {
+    window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+  }
+  window._grid[y][x] = window._grid[y][x] === 1 ? 0 : 1;
+  updateGrid(window._grid);
+  log(`Стена ${window._grid[y][x] === 1 ? 'установлена' : 'удалена'} в (${x},${y})`);
+}
+
+function addNewSpawner(x, y) {
   const id = `S${currentSpawnerId++}`;
   const color = getRandomColor();
   spawnersUI[id] = { pos: { x, y }, color };
@@ -166,59 +171,74 @@
   log(`Спавн "${id}" добавлен на (${x},${y})`);
 }
 
-
-    function updateGridState() {
+function updateGridState() {
   for (const id in spawnersUI) {
     setPathForSpawner(id, spawnersUI[id].pos, goal, movementMode);
   }
 }
 
+// Используйте addEventListener вместо прямого присвоения обработчиков, чтобы избежать возможных конфликтов и улучшить читаемость
+document.getElementById('tool-wall').addEventListener('click', () => {
+  selectedToolName = 'wall';
+  selectTool('wall');
+  log('Выбран инструмент: Стена');
+});
+document.getElementById('tool-start').addEventListener('click', () => {
+  selectedToolName = 'start';
+  selectTool('start');
+  log('Выбран инструмент: Старт');
+});
+document.getElementById('tool-goal').addEventListener('click', () => {
+  selectedToolName = 'goal';
+  selectTool('goal');
+  log('Выбран инструмент: Финиш');
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  resetGrid();
+  window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+  spawnersUI = {};
+  currentSpawnerId = 1;
+  goal = { x: 14, y: 7 };
+  log('Сетка и спавны сброшены');
+  redraw();
+});
+document.getElementById('runBtn').addEventListener('click', () => {
+  if (Object.keys(spawnersUI).length === 0) {
+    log('Нет спавнов для движения');
+    return;
+  }
+  startOrders();
+  log('Движение запущено');
+});
+document.getElementById('speedRange').addEventListener('input', e => onSpeedChange(e.target.value));
+document.getElementById('speedInput').addEventListener('change', e => onSpeedChange(e.target.value));
+document.getElementById('moveMode').addEventListener('change', onMoveModeChange);
 
-    document.getElementById('tool-wall').onclick = () => { selectedToolName = 'wall'; selectTool('wall'); log('Выбран инструмент: Стена'); };
-    document.getElementById('tool-start').onclick = () => { selectedToolName = 'start'; selectTool('start'); log('Выбран инструмент: Старт'); };
-    document.getElementById('tool-goal').onclick = () => { selectedToolName = 'goal'; selectTool('goal'); log('Выбран инструмент: Финиш'); };
-    document.getElementById('resetBtn').onclick = () => {
-      resetGrid();
-      window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
-      spawnersUI = {};
-      currentSpawnerId = 1;
-      goal = { x: 14, y: 7 };
-      log('Сетка и спавны сброшены');
-      redraw();
-    };
-    document.getElementById('runBtn').onclick = () => {
-      if (Object.keys(spawnersUI).length === 0) {
-        log('Нет спавнов для движения');
-        return;
-      }
-      startOrders();
-      log('Движение запущено');
-    };
-    document.getElementById('speedRange').oninput = e => { onSpeedChange(e.target.value); };
-    document.getElementById('speedInput').onchange = e => { onSpeedChange(e.target.value); };
-    document.getElementById('moveMode').onchange = onMoveModeChange;
+(function init() {
+  window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+  resetGrid();
+  redraw();
+  log('Инициализация завершена. Выберите инструмент и начните работу.');
+})();
+(function verifyFunctions() {
+  const funcs = [
+    'selectTool',
+    'updateSpeed',
+    'updateMoveMode',
+    'resetGrid',
+    'draw',
+    'startOrders',
+    'addSpawner',
+    'setPathForSpawner',
+    'updateGrid',
+    'getPathForSpawner'
+  ];
+  funcs.forEach(fnName => {
+    if (typeof window[fnName] !== 'function') {
+      log(`[❌] Функция \`${fnName}()\` не определена`);
+    } else {
+      log(`[✅] \`${fnName}()\` готова`);
+    }
+  });
+})();
 
-
-    (function init() {
-      window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
-      resetGrid();
-      redraw();
-      log('Инициализация завершена. Выберите инструмент и начните работу.');
-
-      // Проверка наличия всех необходимых функций один раз при инициализации
-      (function verifyFunctions() {
-        if (typeof selectTool !== 'function') log("[❌] Функция `selectTool()` не определена"); else log("[✅] `selectTool()` готова");
-        if (typeof updateSpeed !== 'function') log("[❌] Функция `updateSpeed()` не определена"); else log("[✅] `updateSpeed()` готова");
-        if (typeof updateMoveMode !== 'function') log("[❌] Функция `updateMoveMode()` не определена"); else log("[✅] `updateMoveMode()` готова");
-        if (typeof resetGrid !== 'function') log("[❌] Функция `resetGrid()` не определена"); else log("[✅] `resetGrid()` готова");
-        if (typeof draw !== 'function') log("[❌] Функция `draw()` не определена"); else log("[✅] `draw()` готова");
-        if (typeof startOrders !== 'function') log("[❌] Функция `startOrders()` не определена"); else log("[✅] `startOrders()` готова");
-        if (typeof addSpawner !== 'function') log("[❌] Функция `addSpawner()` не определена"); else log("[✅] `addSpawner()` готова");
-        if (typeof setPathForSpawner !== 'function') log("[❌] Функция `setPathForSpawner()` не определена"); else log("[✅] `setPathForSpawner()` готова");
-        if (typeof updateGrid !== 'function') log("[❌] Функция `updateGrid()` не определена"); else log("[✅] `updateGrid()` готова");
-        if (typeof getPathForSpawner !== 'function') log("[❌] Функция `getPathForSpawner()` не определена"); else log("[✅] `getPathForSpawner()` готова");
-      })();
-    })();
-  </script>
-</body>
-</html>
