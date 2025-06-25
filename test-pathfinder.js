@@ -45,20 +45,17 @@ function updateSpeed(val) {
   console.log('[⚙️] Установлена скорость:', speed);
 }
 
+function isCornerCuttingAllowed(mode) {
+  return mode !== '8nc';
+}
+
 function updateMoveMode() {
   movementMode = moveModeSelect.value; // строка: '4', '8', '8nc', '16', '32'
 
-  let allowCornerCutting = true;
+  const allowCornerCutting = isCornerCuttingAllowed(movementMode);
 
-  if (movementMode === '4') {
-    allowCornerCutting = true;
-  } else if (movementMode === '8') {
-    allowCornerCutting = true;
-  } else if (movementMode === '8nc') {
-    allowCornerCutting = false;
-  } else if (movementMode === '16' || movementMode === '32') {
-    allowCornerCutting = true;
-  }
+  // Инициализация pathfinder заново с новыми параметрами
+  initPathfinder(GRID_WIDTH, GRID_HEIGHT, movementMode, allowCornerCutting);
 
   console.log('[🧭] Режим перемещения:', movementMode);
   for (const id in spawners) {
@@ -66,6 +63,8 @@ function updateMoveMode() {
   }
   draw();
 }
+
+
 
 
 function selectTool(tool) {
@@ -77,10 +76,14 @@ function resetGrid() {
   grid = Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
   spawners = {};
   currentSpawnerId = 1;
+
+  initPathfinder(GRID_WIDTH, GRID_HEIGHT, movementMode, isCornerCuttingAllowed(movementMode));
+
   updateGrid(grid);
   draw();
   console.log('[🔄] Сброс сетки и спавнеров');
 }
+
 
 function getRandomColor() {
   const colors = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1'];
@@ -147,17 +150,7 @@ canvas.addEventListener('click', e => {
 
   if (x < 0 || y < 0 || x >= GRID_WIDTH || y >= GRID_HEIGHT) return;
 
-  let allowCornerCutting = true;
-
-  if (movementMode === '4') {
-    allowCornerCutting = true;
-  } else if (movementMode === '8') {
-    allowCornerCutting = true;
-  } else if (movementMode === '8nc') {
-    allowCornerCutting = false;
-  } else if (movementMode === '16' || movementMode === '32') {
-    allowCornerCutting = true;
-  }
+  const allowCornerCutting = isCornerCuttingAllowed(movementMode);
 
   switch (selectedTool) {
     case 'wall':
@@ -181,6 +174,7 @@ canvas.addEventListener('click', e => {
 
   draw();
 });
+
 
 
 function tickMovement() {
@@ -210,6 +204,9 @@ function startOrders() {
 }
 
 function initUI() {
+  // Инициализация pathfinder при загрузке UI
+  initPathfinder(GRID_WIDTH, GRID_HEIGHT, movementMode, isCornerCuttingAllowed(movementMode));
+
   document.getElementById('resetBtn')?.addEventListener('click', resetGrid);
   document.getElementById('runBtn')?.addEventListener('click', startOrders);
 
@@ -227,6 +224,7 @@ function initUI() {
 
   console.log('[✅] UI инициализирован');
 }
+
 
 (function verifyFunctions() {
   const log = console.log;
