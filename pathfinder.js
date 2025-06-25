@@ -29,7 +29,7 @@
  */
 
 let grid = [];
-let gridHash = '';
+let gridHash = null;  // чтобы отличать отсутствие хэша от пустой строки
 const spawners = new Map(); // spawnerId => { start, goal, mode }
 const pathsCache = new Map(); // spawnerId => [{x,y}]
 const LOG_PREFIX = '[Pathfinder]';
@@ -42,41 +42,69 @@ function log(message) {
 }
 
 /** Хэш строки карты (простая) для контроля изменений */
-function hashGrid(grid) {
+async function hashGridAsync(grid) {
   try {
-    return grid.map(row => row.join(',')).join('|');
-  } catch {
+    const str = grid.map(row => row.join(',')).join('|');
+    const buffer = new TextEncoder().encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) {
+    console.error(`${LOG_PREFIX} hashGridAsync error:`, e);
     return '';
   }
 }
 
+
+
 /** 1. Инициализация карты */
-export function initPathfinder(newGrid) {
+let diagonalPassCheckEnabled = true;
+let currentMovementMode = '4';
+
+export async function initPathfinder(newGrid, mode = '4', allowDiagonalPass = true) {
   if (!Array.isArray(newGrid) || newGrid.length === 0) {
     throw new Error('initPathfinder: invalid grid');
   }
+
+  // Проверяем валидность: все строки одинаковой длины и содержат только 0 или 1
+  const width = newGrid[0].length;
+  for (const row of newGrid) {
+    if (!Array.isArray(row) || row.length !== width) {
+      throw new Error('initPathfinder: inconsistent row length in grid');
+    }
+    for (const cell of row) {
+      if (cell !== 0 && cell !== 1) {
+        throw new Error('initPathfinder: grid cells must be 0 or 1');
+      }
+    }
+  }
+
   grid = newGrid;
-  gridHash = hashGrid(grid);
+  gridHash = await hashGridAsync(grid); // асинхронно
+
   spawners.clear();
   pathsCache.clear();
-  log('Карта и состояние инициализированы');
+  diagonalPassCheckEnabled = allowDiagonalPass;
+  currentMovementMode = mode;
+
+  log(`Карта и состояние инициализированы (режим: ${mode}, диагональ: ${allowDiagonalPass})`);
 }
 
 /** 2. Обновление карты с проверкой изменений */
-export function updateGrid(newGrid) {
+export async function updateGrid(newGrid) {
   if (!Array.isArray(newGrid) || newGrid.length === 0) {
     throw new Error('updateGrid: invalid grid');
   }
-  const newHash = hashGrid(newGrid);
+  const newHash = await hashGridAsync(newGrid);
   if (newHash === gridHash) {
     log('Карта не изменилась, пересчёт путей не требуется');
     return;
   }
-  grid = newGrid;
+  // Создаём копию, чтобы избежать мутаций исходного массива
+  grid = newGrid.map(row => row.slice());
   gridHash = newHash;
   pathsCache.clear();
   log('Карта обновлена, кэш очищен');
-  recalcAllPaths();
+  recalcAllPaths(); // или await recalcAllPaths(), если она асинхронна
 }
 
 /**
@@ -136,7 +164,7 @@ export function findPath32(start, goal) {
  * @param {{x:number,y:number}} goal 
  * @param {'4'|'8'|'8nc'|'16'|'32'} mode — режим поиска пути
  */
-export function setPathForSpawner(spawnerId, start, goal, mode = '4') {
+export function setPathForSpawner(spawnerId, start, goal, mode = currentMovementMode) {
   let path = null;
   switch (mode) {
     case '4': path = findPath4(start, goal); break;
@@ -222,11 +250,19 @@ export function recalcAllPaths() {
  * @param {{x:number,y:number}} goal 
  * @param {'4'|'8'|'8nc'|'16'|'32'} mode 
  */
+function isValidPos(pos) {
+  return pos && typeof pos.x === 'number' && typeof pos.y === 'number' && isInsideGrid(pos);
+}
+
 export function addSpawner(spawnerId, start, goal, mode = '4') {
+  if (!isValidPos(start) || !isValidPos(goal)) {
+    throw new Error(`addSpawner: некорректные координаты start или goal`);
+  }
   spawners.set(spawnerId, { start, goal, mode });
   setPathForSpawner(spawnerId, start, goal, mode);
   log(`Спавн "${spawnerId}" добавлен (режим: ${mode})`);
 }
+
 
 /**
  * 14. Удаляет спавн и путь
@@ -246,8 +282,11 @@ export function removeSpawner(spawnerId) {
  * @param {string} effect — тип эффекта, например 'slow', 'disable'
  */
 export function applyEffectToPosition(x, y, effect) {
+  // Заглушка — здесь может быть интеграция с внешним модулем эффектов
   log(`Применён эффект "${effect}" на позицию (${x},${y})`);
+  return true; // или false, если эффект не применим
 }
+
 
 /**
  * 16. Включить/выключить проверку диагональных проходов между препятствиями
@@ -260,6 +299,16 @@ export function setDiagonalPassCheck(enabled) {
 
 // ———————————————————————
 // Вспомогательные функции
+
+export function getCurrentMovementMode() {
+  return currentMovementMode;
+}
+
+export function isDiagonalPassCheckEnabled() {
+  return diagonalPassCheckEnabled;
+}
+
+
 
 function isWalkable(x, y) {
   return (
@@ -466,6 +515,7 @@ function isInsideGrid(pos) {
  * @returns {boolean}
  */
 function canPassDiagonal(x, y, dx, dy) {
+  if (!isInsideGrid({x: x + dx, y: y}) || !isInsideGrid({x: x, y: y + dy})) return false;
   const side1 = grid[y][x + dx];
   const side2 = grid[y + dy][x];
   return side1 === 0 && side2 === 0;
