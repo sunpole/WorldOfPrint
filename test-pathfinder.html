@@ -65,9 +65,13 @@
     <div class="labelled">
       <label for="moveMode">Режим перемещения:</label>
       <select id="moveMode">
-        <option value="4">4 стороны</option>
-        <option value="8">8 сторон</option>
-      </select>
+  <option value="4">4 стороны</option>
+  <option value="8">8 сторон</option>
+  <option value="8nc">8 сторон (без проверки диагоналей)</option>
+  <option value="16">16 направлений</option>
+  <option value="32">32 направления</option>
+</select>
+
     </div>
   </div>
   <div class="log" id="log"></div>
@@ -90,7 +94,7 @@
     const ctx = canvas.getContext('2d');
 
     let currentSpawnerId = 1;
-    let movementMode = 4;
+    let movementMode = '4';  // строка для удобства работы с новыми режимами
     let speed = 5;
     let selectedToolName = 'wall';
     let goal = { x: 14, y: 7 };
@@ -120,20 +124,16 @@
     }
 
     function onMoveModeChange() {
-      const modeSelect = document.getElementById('moveMode');
-      movementMode = parseInt(modeSelect.value);
-      updateMoveMode();
-      log(`Режим перемещения установлен: ${movementMode} направлений`);
-      const useDiagonal = (movementMode === 8);
-      for (const id in spawnersUI) {
-        setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
-      }
-      draw();
-    }
+  const modeSelect = document.getElementById('moveMode');
+  movementMode = modeSelect.value;  // строка: '4', '8', '8nc', '16', '32'
+  updateMoveMode();
+  log(`Режим перемещения установлен: ${movementMode} направлений`);
+  for (const id in spawnersUI) {
+    setPathForSpawner(id, spawnersUI[id].pos, goal, movementMode);
+  }
+  draw();
+}
 
-    function redraw() {
-      draw();
-    }
 
     canvas.addEventListener('click', e => {
       const rect = canvas.getBoundingClientRect();
@@ -159,20 +159,20 @@
     }
 
     function addNewSpawner(x, y) {
-      const id = `S${currentSpawnerId++}`;
-      const color = getRandomColor();
-      spawnersUI[id] = { pos: { x, y }, color };
-      const useDiagonal = (movementMode === 8);
-      addSpawner(id, { x, y }, goal, useDiagonal);
-      log(`Спавн "${id}" добавлен на (${x},${y})`);
-    }
+  const id = `S${currentSpawnerId++}`;
+  const color = getRandomColor();
+  spawnersUI[id] = { pos: { x, y }, color };
+  addSpawner(id, { x, y }, goal, movementMode);
+  log(`Спавн "${id}" добавлен на (${x},${y})`);
+}
+
 
     function updateGridState() {
-      const useDiagonal = (movementMode === 8);
-      for (const id in spawnersUI) {
-        setPathForSpawner(id, spawnersUI[id].pos, goal, useDiagonal);
-      }
-    }
+  for (const id in spawnersUI) {
+    setPathForSpawner(id, spawnersUI[id].pos, goal, movementMode);
+  }
+}
+
 
     document.getElementById('tool-wall').onclick = () => { selectedToolName = 'wall'; selectTool('wall'); log('Выбран инструмент: Стена'); };
     document.getElementById('tool-start').onclick = () => { selectedToolName = 'start'; selectTool('start'); log('Выбран инструмент: Старт'); };
@@ -196,7 +196,8 @@
     };
     document.getElementById('speedRange').oninput = e => { onSpeedChange(e.target.value); };
     document.getElementById('speedInput').onchange = e => { onSpeedChange(e.target.value); };
-    document.getElementById('moveMode').onchange = () => { onMoveModeChange(); };
+    document.getElementById('moveMode').onchange = onMoveModeChange;
+
 
     (function init() {
       window._grid = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
