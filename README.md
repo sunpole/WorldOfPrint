@@ -1,15 +1,17 @@
 # WorldOfPrint
 Develop your own printing business and build a top-notch, advanced print shop. Discover new things and explore the fascinating world of printing. A tower defense game simulating the printing industry, combining strategy and printing production.
 
+## 🔗 Demo & Test Pages
 
-https://sunpole.github.io/WorldOfPrint/test-pathfinder.html
+- [Test Pathfinder](https://sunpole.github.io/WorldOfPrint/test-pathfinder.html)
 
-https://sunpole.github.io/WorldOfPrint/test-field.html
-https://sunpole.github.io/WorldOfPrint/test-field2.html
-https://sunpole.github.io/WorldOfPrint/test-field3.html
-https://sunpole.github.io/WorldOfPrint/test-field4.html
-https://sunpole.github.io/WorldOfPrint/test-field5.html
-https://sunpole.github.io/WorldOfPrint/test-field6.html
 
-https://sunpole.github.io/WorldOfPrint/test-field7.html
+- [Test Field 1](https://sunpole.github.io/WorldOfPrint/test-field.html)
+- [Test Field 2](https://sunpole.github.io/WorldOfPrint/test-field2.html)
+- [Test Field 3](https://sunpole.github.io/WorldOfPrint/test-field3.html)
+- [Test Field 4](https://sunpole.github.io/WorldOfPrint/test-field4.html)
+- [Test Field 5](https://sunpole.github.io/WorldOfPrint/test-field5.html)
+- [Test Field 6](https://sunpole.github.io/WorldOfPrint/test-field6.html)
 
+
+- [Test Field 7](https://sunpole.github.io/WorldOfPrint/test-field7.html)
